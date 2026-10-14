@@ -69,6 +69,7 @@ qdrant_data/
 Thumbs.db
 Desktop.ini
 .idea/
-.vscode/
+.vscode/*
+!.vscode/settings.json
 *.swp
 *.swo
