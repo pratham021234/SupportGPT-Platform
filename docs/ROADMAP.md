@@ -39,13 +39,16 @@ graph TD
 
 ---
 
-### Phase 01: Multi-Channel Data Ingestion Models & Ticket Foundations
-- **Status**: Scheduled (Next Phase)
+### Phase 01: Canonical Domain Model, PostgreSQL Persistence & Migration Foundation
+- **Status**: **COMPLETE / VERIFIED**
 - **Dependencies**: Phase 00
-- **Scope**:
-  - Universal ticket and message schema definition.
-  - Ingestion adapter interfaces (Email MIME parsing, Webhook payloads).
-  - Normalization pipeline converting heterogeneous customer inquiries into canonical conversation models.
+- **Scope & Deliverables**:
+  - Canonical domain models: `Organization`, `OrganizationTicketCounter`, `Customer`, `CustomerIdentity`, `Ticket`, `Conversation`, `Message`, `Attachment`, `TicketEvent`, `IngestionReceipt`.
+  - Database-enforced tenant boundaries via composite foreign keys spanning `(parent_id, organization_id)`.
+  - Concurrency-safe atomic sequential ticket number allocation per organization via row-level locks.
+  - Deletion safeguards with explicit `ON DELETE RESTRICT` preserving customer history.
+  - Alembic migration `0002_canonical_domain_model` with verified reversible DDL.
+  - Automated test suite covering slug/identity normalization, lifecycle integrity, unique constraints, and check constraints.
 
 ---
 

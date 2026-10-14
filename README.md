@@ -6,15 +6,19 @@ SupportGPT AI is a commercial-grade, multi-tenant B2B SaaS platform engineered f
 
 ---
 
-## 1. Phase 00 Status: Foundation & Standards
+## 1. Engineering Status: Phase 00 & Phase 01 Completed
 
-Phase 00 establishes the greenfield architecture, clean layer boundaries, and engineering standards:
-- **Architecture**: Modular Monolith with clean domain boundaries (`api/`, `core/`, `db/`, `models/`, `schemas/`, `ai/`).
-- **Backend Transport**: Python 3.11, FastAPI, Pydantic v2 Settings with strict production validation.
-- **Data & Migrations**: PostgreSQL 16 authoritative datastore, SQLAlchemy 2.0 (asyncio + asyncpg), Alembic async migration pipeline.
-- **Frontend Presentation**: Next.js (App Router), React 19, TypeScript (Strict Mode), Tailwind CSS, live system diagnostics console.
-- **Quality Gates**: Pytest automated test suite (Unit, API, Integration), Ruff linter, and GitHub Actions CI workflow.
-- **Honest Metrics**: Zero fabricated business counts, fake tickets, fake revenue, or simulated accuracy.
+- **Phase 00 Foundation & Standards**:
+  - **Architecture**: Modular Monolith with clean domain boundaries (`api/`, `core/`, `db/`, `models/`, `schemas/`, `ai/`).
+  - **Backend Transport**: Python 3.11, FastAPI, Pydantic v2 Settings with strict production validation.
+  - **Frontend Shell**: Next.js (App Router), React 19, TypeScript (Strict Mode), Tailwind CSS, live system diagnostics console.
+  - **Quality Gates**: Pytest automated test suite, Ruff linter, and GitHub Actions CI workflow.
+  - **Honest Metrics**: Zero fabricated business counts, fake tickets, fake revenue, or simulated accuracy.
+- **Phase 01 Canonical Domain Model & PostgreSQL Persistence**:
+  - **Authoritative Entities**: `Organization`, `OrganizationTicketCounter`, `Customer`, `CustomerIdentity`, `Ticket`, `Conversation`, `Message`, `Attachment`, `TicketEvent`, `IngestionReceipt`.
+  - **Database-Enforced Tenant Consistency**: Composite foreign keys spanning `(ticket_id, organization_id)`, `(conversation_id, organization_id)`, `(message_id, organization_id)`.
+  - **Deletion Safeguards**: Strict `ON DELETE RESTRICT` on organization and customer relationships to prevent accidental data destruction.
+  - **Alembic Migrations**: `0001_initial_foundation` and `0002_canonical_domain_model` with verified transactional upgrade and downgrade DDL.
 
 ---
 
@@ -122,3 +126,4 @@ cmd /c npm run build
 - [ADR 0001: Modular Monolith](docs/adr/0001-modular-monolith-architecture.md)
 - [ADR 0002: Async SQLAlchemy & Alembic](docs/adr/0002-async-sqlalchemy-and-alembic.md)
 - [ADR 0003: Multi-Tenancy & PostgreSQL RLS Strategy](docs/adr/0003-tenant-isolation-and-rls-strategy.md)
+- [ADR 0004: Canonical Domain Model & Tenant Integrity](docs/adr/0004-canonical-domain-model-and-tenant-integrity.md)

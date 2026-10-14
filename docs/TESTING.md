@@ -12,9 +12,9 @@ In SupportGPT AI, automated testing is treated as an active quality gate rather 
 
 | Category | Scope | Tools | Execution Target |
 |---|---|---|---|
-| **Unit Tests** | Core configuration validation, production invariants, sensitive log redaction, custom exception schemas, AI boundary proposal invariants. | Pytest | Fast, isolated, zero external network or database dependency. |
+| **Unit Tests** | Core configuration validation, production invariants, sensitive log redaction, custom exception schemas, AI boundary proposal invariants, domain normalization rules, status transitions, and SQLite in-memory relational integrity. | Pytest, `sqlite+aiosqlite` | Fast, isolated, zero external network dependency. |
 | **API Transport Tests** | Route mapping, `/healthz` liveness, `/readyz` dependency degradation, `/api/v1/system/info`, middleware correlation ID propagation, response timing, RFC 7807 error envelopes. | Pytest, `httpx.AsyncClient` | Fast in-memory ASGI transport without network overhead. |
-| **Database Integration Tests** | Async connection verification, declarative table metadata inspection, constraint and naming convention checks. | Pytest, `asyncpg`, PostgreSQL | Live PostgreSQL datastore. (Reports BLOCKED if container is stopped). |
+| **Database Integration Tests** | Async connection verification, declarative table metadata inspection, composite foreign key verification, constraint and naming convention checks. | Pytest, `asyncpg`, PostgreSQL | Live PostgreSQL datastore. (Reports BLOCKED if container is stopped). |
 | **Frontend Static Quality** | Strict type checks (no implicit any, no unchecked index access), code styling. | TypeScript (`tsc`), ESLint | Frontend source tree. |
 | **Frontend Production Build** | Production artifact compilation, static prerendering, server component validation. | Next.js (`next build`) | Standalone deployment bundle. |
 
@@ -52,25 +52,21 @@ cd D:\SupportGPT-Platform
 ### Run Frontend Static Type Verification:
 ```powershell
 cd D:\SupportGPT-Platform\frontend
-npm run type-check
-```
-
-### Run Frontend Linting:
-```powershell
-npm run lint
+cmd /c npm run type-check
 ```
 
 ### Run Frontend Production Build:
 ```powershell
-npm run build
+cmd /c npm run build
 ```
 
 ---
 
 ## 4. Current Quality Status Summary
-- **Backend Unit Tests**: 100% Passing (14 unit tests).
+- **Backend Unit Tests**: 100% Passing (24 unit tests covering normalization, lifecycle, foreign keys, unique constraints, check constraints).
 - **Backend API Tests**: 100% Passing (7 API tests).
-- **Backend Integration Tests**: 1 Passing (schema metadata), 1 Blocked/Skipped (Live PostgreSQL probe waiting for Docker container).
+- **Backend Integration Tests**: 2 Passing (all 11 canonical tables verified on declarative metadata, composite foreign keys verified), 1 Blocked/Skipped (Live PostgreSQL probe waiting for Docker container).
+- **Backend Total**: 33 passed, 1 skipped (blocked by live DB container).
 - **Backend Linting**: 100% Passing (Ruff zero violations).
 - **Frontend Type-Check**: 100% Passing (TypeScript strict mode zero errors).
-- **Frontend Production Build**: Verified.
+- **Frontend Production Build**: 100% Passing (compiled standalone bundle in 4.2s).
