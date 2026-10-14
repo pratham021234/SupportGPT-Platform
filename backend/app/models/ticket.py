@@ -105,6 +105,13 @@ class Ticket(Base, UUIDPrimaryKeyMixin, TimestampMixin):
         nullable=True,
         comment="Structured metadata associated with the ticket",
     )
+    lock_version: Mapped[int] = mapped_column(
+        Integer,
+        default=1,
+        server_default="1",
+        nullable=False,
+        comment="Optimistic concurrency control lock version counter",
+    )
 
     __table_args__ = (
         # Composite foreign key ensuring customer belongs to the identical organization if set

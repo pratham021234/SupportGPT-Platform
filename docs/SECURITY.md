@@ -65,20 +65,45 @@ The configuration engine enforces strict runtime validation:
 
 ---
 
-## 4. Security Boundary & Planned Milestones
+## 4. Active Security Controls (Phase 03 Ticket & Conversation Management)
+
+### A. Direct-ID Attack Resistance & Anti-Enumeration
+- Attempting to access an entity (ticket, conversation, message, customer, attachment, event) belonging to another organization yields `404 Not Found`, identical to a non-existent UUID.
+- The API never responds with `403 Forbidden` or reveals whether a foreign UUID exists.
+
+### B. Optimistic Concurrency Control (OCC)
+- The `tickets` table uses a dedicated integer `lock_version` column.
+- Concurrent updates with mismatched versions fail with `409 Conflict` (`CONCURRENCY_CONFLICT`), completely eliminating lost update race conditions between simultaneous support operators.
+
+### C. Author Role Impersonation Prevention
+- Ordinary agents are restricted to `author_type="agent"`.
+- Submitting messages claiming `author_type="system"` or `author_type="ai"` requires administrative authority (`owner` or `admin`), preventing agent-level identity spoofing.
+
+### D. Attachment Storage Key Redaction
+- Attachment endpoints return public file metadata (`filename`, `content_type`, `size_bytes`, `scan_status`).
+- Internal object storage paths (`storage_key`), cloud bucket names, and credentials are strictly excluded from API responses.
+
+### E. Append-Only Audit Event Trail
+- Ticket mutations atomically commit immutable `TicketEvent` records within the identical transaction.
+- Historical events cannot be edited or deleted by normal API endpoints.
+
+---
+
+## 5. Security Boundary & Planned Milestones
 
 | Security Milestone | Status | Description |
 |---|---|---|
-| **Multi-Tenant Row-Level Security (RLS)** | **Active (Phase 02)** | PostgreSQL RLS policies enforcing tenant isolation via transaction-scoped `set_config('app.current_organization_id', ..., true)`. |
+| **Multi-Tenant Row-Level Security (RLS)** | **Active (Phase 02/03)** | PostgreSQL RLS policies enforcing tenant isolation via transaction-scoped `set_config('app.current_organization_id', ..., true)`. |
 | **Authentication & RBAC** | **Active (Phase 02)** | Argon2id password hashing, server-side revocable sessions, organization memberships, and role-based access control. |
-| **Webhook Verification & Idempotency** | Phase 03 | Cryptographic signature validation (HMAC-SHA256), replay protection, and idempotent event processing. |
+| **Ticket & Conversation Authorization** | **Active (Phase 03)** | Direct-ID attack resistance, OCC conflict prevention, author impersonation blocks, and atomic event audit trails. |
+| **Inbound Webhook Verification** | Phase 04 | Cryptographic signature validation (HMAC-SHA256), replay protection, and idempotent event processing. |
 | **Claim-Level Hallucination Guard** | Phase 05 | Automated decomposition of model completions into atomic claims, checking evidence grounding before delivery. |
 | **Policy Approval Gates** | Phase 06 | Fine-grained intervention gates requiring dual authorization for sensitive actions. |
 | **PII Redaction & Sanitization** | Phase 07 | Automated masking of customer Personally Identifiable Information in forensic trace logs. |
 
 ---
 
-## 5. Vulnerability Reporting
+## 6. Vulnerability Reporting
 For vulnerability disclosures and security findings, contact:  
 `security@supportgpt.ai`
 

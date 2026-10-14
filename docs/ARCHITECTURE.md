@@ -192,9 +192,40 @@ To guarantee multi-tenant data consistency at the PostgreSQL engine level, child
 
 ---
 
-## 7. Known Limitations & Deferred Work (Out of Scope for Phase 02)
-1. **SSO / SAML / OAuth Social Providers**: Deferred to enterprise federation roadmap.
-2. **Ingestion Pipelines**: Webhook endpoints, email MIME parsing, and background workers are scheduled for subsequent phases.
-3. **File Storage**: `Attachment` models persist storage references (`storage_key`), not raw bytes. Object storage integrations (S3/GCS) and malware scanning will be integrated in future phases.
+## 7. Ticket Management, Conversation Services & Concurrency Control (Phase 03)
+
+### 7.1 Sequential Ticket Number Allocation
+- Every organization maintains an atomic counter in `organization_ticket_counters`.
+- During ticket creation, `allocate_next_ticket_number` acquires an exclusive row-level lock via `SELECT ... FOR UPDATE` inside the active transaction.
+- Guarantees sequential human-readable numbering (`TICK-{number}`) without gaps or race conditions under high concurrent ticket creation.
+
+### 7.2 Optimistic Concurrency Control (OCC)
+- The `tickets` table includes an integer column `lock_version` (default 1, non-nullable).
+- State-changing updates accept an optional `lock_version` token.
+- If the client's token does not match the database version, the update is rejected with `409 Conflict` (`CONCURRENCY_CONFLICT`), preventing lost updates between concurrent operators.
+- Successful updates atomically increment `lock_version += 1`.
+
+### 7.3 Domain-Enforced Status Transitions & Assignment Rules
+- Ticket status movements (`open` -> `in_progress` -> `resolved` -> `closed`) are governed centrally by `can_transition_ticket_status()`. Invalid transitions return `409 Conflict` (`INVALID_STATUS_TRANSITION`).
+- Entering `resolved` or `closed` statuses automatically records timestamps (`resolved_at`, `closed_at`).
+- Ticket assignment is restricted to active members of the same organization holding `owner`, `admin`, or `agent` roles. Assigning to read-only `viewer` members or external users is rejected with `409 Conflict` (`INVALID_ASSIGNEE`).
+
+### 7.4 Deterministic Conversation Sequencing & Idempotency
+- Communication threads in `conversations` contain ordered `messages`.
+- Messages are assigned a monotonic `sequence_number` per thread, and queries order by `(created_at ASC, sequence_number ASC, id ASC)` to ensure deterministic rendering.
+- An optional `external_message_id` enforces delivery idempotency per organization, returning the existing record when duplicate provider deliveries occur.
+- Plain text bodies are bounded to 65,536 bytes (64 KB). Author role impersonation (`system` or `ai`) by ordinary agents is blocked with `403 Forbidden`.
+
+### 7.5 Atomic Lifecycle Audit Events
+- Mutations (creation, status changes, priority changes, assignments, customer associations) emit immutable `TicketEvent` records within the identical database transaction.
+- If an update payload specifies unchanged attributes, no redundant event is generated.
+- Events capture previous values, new values, actor classification, user ID, and HTTP correlation IDs.
+
+---
+
+## 8. Known Limitations & Deferred Work (Out of Scope for Phase 03)
+1. **Email / IMAP / SMTP Ingestion**: Inbound email parsing, MIME parsing, and automated pipeline ingestion belong to Phase 04.
+2. **AI Generation & Verification**: AI draft generation, RAG, claim extraction, and verification pipelines belong to subsequent phases.
+3. **Binary File Storage**: Attachments manage metadata only (`filename`, `content_type`, `size_bytes`, `scan_status`). Object storage presigned URLs and virus scanning pipelines belong to subsequent phases.
 4. **Billing & Subscriptions**: Stripe/Paddle billing models and seat management are deferred to subsequent phases.
 

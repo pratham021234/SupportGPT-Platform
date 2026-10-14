@@ -85,3 +85,115 @@ export interface LogoutResponse {
   message: string;
 }
 
+export type TicketStatus = "open" | "pending" | "in_progress" | "resolved" | "closed";
+export type TicketPriority = "urgent" | "high" | "medium" | "low";
+export type TicketChannel = "email" | "chat" | "api" | "web" | "internal";
+
+export interface Ticket {
+  id: string;
+  organization_id: string;
+  customer_id: string | null;
+  ticket_number: number;
+  ticket_reference: string;
+  subject: string;
+  status: TicketStatus;
+  priority: TicketPriority;
+  channel: TicketChannel;
+  assigned_actor_id: string | null;
+  first_response_at: string | null;
+  resolved_at: string | null;
+  closed_at: string | null;
+  external_reference: string | null;
+  lock_version: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TicketListResponse {
+  items: Ticket[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export interface TicketCreatePayload {
+  subject: string;
+  description?: string;
+  priority?: TicketPriority;
+  channel?: TicketChannel;
+  customer_id?: string;
+  assigned_actor_id?: string;
+}
+
+export interface TicketUpdatePayload {
+  subject?: string;
+  status?: TicketStatus;
+  priority?: TicketPriority;
+  assigned_actor_id?: string | null;
+  customer_id?: string | null;
+  lock_version?: number;
+}
+
+export interface Conversation {
+  id: string;
+  organization_id: string;
+  ticket_id: string;
+  channel_type: TicketChannel;
+  external_thread_id: string | null;
+  status: string;
+  last_message_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ConversationListResponse {
+  items: Conversation[];
+  total: number;
+}
+
+export interface Message {
+  id: string;
+  organization_id: string;
+  conversation_id: string;
+  direction: "inbound" | "outbound";
+  author_type: "customer" | "agent" | "system" | "ai";
+  author_id: string | null;
+  sender_display_name: string | null;
+  body_text: string;
+  sequence_number: number;
+  delivery_status: string;
+  created_at: string;
+  provider_sent_at?: string | null;
+}
+
+export interface MessageListResponse {
+  items: Message[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export interface MessageCreatePayload {
+  body_text: string;
+  direction?: "inbound" | "outbound";
+  author_type?: "customer" | "agent" | "system" | "ai";
+  content_type?: string;
+}
+
+export interface Customer {
+  id: string;
+  organization_id: string;
+  display_name: string;
+  company_name: string | null;
+  external_customer_id: string | null;
+  status: string;
+  created_at: string;
+}
+
+export interface CustomerListResponse {
+  items: Customer[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+

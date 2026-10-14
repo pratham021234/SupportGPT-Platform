@@ -6,7 +6,7 @@ SupportGPT AI is a commercial-grade, multi-tenant B2B SaaS platform engineered f
 
 ---
 
-## 1. Engineering Status: Phase 00, Phase 01 & Phase 02 Completed
+## 1. Engineering Status: Phase 00, Phase 01, Phase 02 & Phase 03 Completed
 
 - **Phase 00 Foundation & Standards**:
   - **Architecture**: Modular Monolith with clean domain boundaries (`api/`, `core/`, `db/`, `models/`, `schemas/`, `ai/`).
@@ -27,6 +27,15 @@ SupportGPT AI is a commercial-grade, multi-tenant B2B SaaS platform engineered f
   - **PostgreSQL Row-Level Security (RLS)**: Active RLS with `FORCE ROW LEVEL SECURITY` across 7 tenant tables, transactional context via `SELECT set_config('app.current_organization_id', :org_id, true)`.
   - **Alembic Migration**: `0003_auth_membership_rbac` with verified upgrade and downgrade paths.
   - **Frontend Integration**: Real Next.js login interface (`/login`), typed API client with credentials, session-aware app header, and live logout.
+- **Phase 03 Ticket Management, Conversation Services, Message APIs & Business Logic**:
+  - **Ticket Lifecycle & Numbering**: Atomic sequential ticket allocation (`TICK-{number}`) via row-level locks on `organization_ticket_counters`.
+  - **Optimistic Concurrency Control (OCC)**: Version-based locking (`lock_version` integer on `tickets`) preventing lost updates with `409 Conflict` responses.
+  - **Status Transitions & Assignment**: Centralized state transition validation (`can_transition_ticket_status`) and membership eligibility checks (rejecting read-only viewers and external users).
+  - **Conversation & Message Services**: Deterministic sequence ordering (`created_at ASC, sequence_number ASC, id ASC`), idempotency on `external_message_id`, and author impersonation prevention.
+  - **Attachment Metadata Protection**: Metadata retrieval strictly omitting internal `storage_key` locator secrets.
+  - **Append-Only Audit Trail**: Immutable `TicketEvent` history committed atomically with ticket mutations.
+  - **Alembic Migration**: `0004_ticket_concurrency_version` with verified reversible upgrade and downgrade.
+  - **Frontend Integration**: Real Next.js `/tickets` management console with live listing, creation, conversation inspection, status transitions, and optimistic concurrency reloading.
 
 ---
 
@@ -136,3 +145,4 @@ cmd /c npm run build
 - [ADR 0003: Multi-Tenancy & PostgreSQL RLS Strategy](docs/adr/0003-tenant-isolation-and-rls-strategy.md)
 - [ADR 0004: Canonical Domain Model & Tenant Integrity](docs/adr/0004-canonical-domain-model-and-tenant-integrity.md)
 - [ADR 0005: Production Authentication, Session Lifecycle, RBAC & PostgreSQL RLS](docs/adr/0005-production-authentication-and-rbac.md)
+- [ADR 0006: Ticket Management, Conversation Services & Concurrency Control](docs/adr/0006-ticket-management-and-conversation-services.md)

@@ -72,8 +72,14 @@ export function AppHeader() {
             <span className="text-xs text-slate-400">Default Workspace</span>
           )}
         </Link>
+        <Link
+          href="/tickets"
+          className="text-xs px-2.5 py-1 rounded-md bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 hover:bg-indigo-500/20 transition-colors font-medium"
+        >
+          Tickets Console
+        </Link>
         <Badge variant="brand" size="sm">
-          Phase 02 &bull; RBAC
+          Phase 03 &bull; Ticket Operations
         </Badge>
       </div>
 

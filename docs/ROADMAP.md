@@ -68,12 +68,22 @@ graph TD
 
 ---
 
-### Phase 03: Support Inbox, Persistent Conversations & State Management
-- **Status**: Scheduled
-- **Dependencies**: Phase 02
-- **Scope**:
-  - Real-time support inbox with conversation assignment, status transitions, and priority tagging.
-  - Customer profile timeline and conversation thread persistence.
+### Phase 03: Ticket Management, Conversation Services, Message APIs & Business Logic
+- **Status**: **COMPLETE / VERIFIED**
+- **Dependencies**: Phase 00, Phase 01, Phase 02
+- **Scope & Deliverables**:
+  - Ticket management service with sequential atomic allocation (`allocate_next_ticket_number` row-level locking).
+  - Optimistic Concurrency Control (OCC) via `lock_version` column on `tickets` with conflict handling (`409 Conflict`).
+  - Domain-enforced lifecycle status transitions (`can_transition_ticket_status`) and assignment eligibility rules (rejecting viewers and non-members).
+  - Conversation threads and message creation with deterministic sequence numbers (`(created_at ASC, sequence_number ASC, id ASC)`).
+  - External delivery idempotency on `external_message_id` preventing duplicate communications.
+  - Author role validation preventing ordinary agents from impersonating `system` or `ai` senders.
+  - Attachment metadata retrieval with internal `storage_key` locator redaction.
+  - Append-only transactional audit trail via `TicketEvent` with correlation ID linking.
+  - Complete RESTful API endpoints for tickets, conversations, messages, attachments, and customers.
+  - Alembic migration `0004_ticket_concurrency_version` with verified reversible upgrade and downgrade.
+  - Real Next.js `/tickets` management console with live ticket listing, creation, conversation inspection, status transitions, and optimistic concurrency reloading.
+  - Automated test suite (79 tests passed, 0 failures, 1 optional container probe skipped).
 
 ---
 
