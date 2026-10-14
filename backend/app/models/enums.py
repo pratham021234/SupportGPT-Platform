@@ -9,6 +9,26 @@ class OrganizationStatus(StrEnum):
     ARCHIVED = "archived"
 
 
+class UserStatus(StrEnum):
+    ACTIVE = "active"
+    SUSPENDED = "suspended"
+    DISABLED = "disabled"
+
+
+class MembershipRole(StrEnum):
+    OWNER = "owner"
+    ADMIN = "admin"
+    AGENT = "agent"
+    VIEWER = "viewer"
+
+
+class MembershipStatus(StrEnum):
+    ACTIVE = "active"
+    SUSPENDED = "suspended"
+    INVITED = "invited"
+    REVOKED = "revoked"
+
+
 class CustomerStatus(StrEnum):
     ACTIVE = "active"
     BLOCKED = "blocked"

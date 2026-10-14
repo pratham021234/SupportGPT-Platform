@@ -51,3 +51,37 @@ export interface ErrorBody {
 export interface ErrorResponse {
   error: ErrorBody;
 }
+
+export interface UserProfile {
+  id: string;
+  email: string;
+  display_name: string;
+  status: string;
+  created_at: string;
+  last_login_at?: string | null;
+}
+
+export interface UserOrganizationSummary {
+  organization_id: string;
+  name: string;
+  slug: string;
+  role: string;
+  status: string;
+}
+
+export interface LoginResponse {
+  user: UserProfile;
+  expires_at: string;
+  token?: string | null;
+  organizations: UserOrganizationSummary[];
+}
+
+export interface CurrentUserResponse {
+  user: UserProfile;
+  organizations: UserOrganizationSummary[];
+}
+
+export interface LogoutResponse {
+  message: string;
+}
+

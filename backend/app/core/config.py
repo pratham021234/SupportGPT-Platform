@@ -51,6 +51,40 @@ class Settings(BaseSettings):
         description="List of allowed CORS origins",
     )
 
+    # Authentication & Session Lifecycle Configuration
+    SESSION_SECRET_KEY: str = Field(
+        default="dev_session_secret_key_change_in_production_min_32_bytes_len",
+        description="Secret key for signing session tokens and cookies",
+    )
+    SESSION_COOKIE_NAME: str = Field(
+        default="supportgpt_session",
+        description="Cookie name for browser session tokens",
+    )
+    SESSION_COOKIE_SECURE: bool = Field(
+        default=False,
+        description="Whether to require HTTPS for session cookies",
+    )
+    SESSION_COOKIE_SAMESITE: Literal["lax", "strict", "none"] = Field(
+        default="lax",
+        description="SameSite policy for session cookies",
+    )
+    SESSION_COOKIE_HTTPONLY: bool = Field(
+        default=True,
+        description="Enforce HttpOnly flag on session cookies",
+    )
+    SESSION_DURATION_SECONDS: int = Field(
+        default=604800,
+        description="Session lifespan in seconds (default: 7 days)",
+    )
+    LOGIN_RATE_LIMIT_MAX_ATTEMPTS: int = Field(
+        default=5,
+        description="Max failed login attempts per window",
+    )
+    LOGIN_RATE_LIMIT_WINDOW_SECONDS: int = Field(
+        default=60,
+        description="Rate limit evaluation window in seconds",
+    )
+
     # Relational Database Configuration
     DATABASE_URL: str = Field(
         default="postgresql+asyncpg://supportgpt_user:supportgpt_dev_password@localhost:5432/supportgpt_db",
@@ -120,6 +154,14 @@ class Settings(BaseSettings):
             # 3. CORS origins must not allow wildcard in production
             if "*" in self.CORS_ORIGINS:
                 raise ValueError("Wildcard '*' CORS origin is forbidden in production.")
+
+            # 4. Session secret key must be custom and secure in production
+            if "dev_session_secret_key" in self.SESSION_SECRET_KEY:
+                raise ValueError(
+                    "SESSION_SECRET_KEY uses default development secret which is forbidden in production."
+                )
+            if len(self.SESSION_SECRET_KEY) < 32:
+                raise ValueError("SESSION_SECRET_KEY must be at least 32 characters in production.")
 
         return self
 

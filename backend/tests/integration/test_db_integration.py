@@ -40,6 +40,9 @@ def test_base_metadata_contains_all_canonical_domain_tables():
         "ticket_events",
         "ingestion_receipts",
         "system_event_logs",
+        "users",
+        "organization_memberships",
+        "user_sessions",
     }
     assert expected_tables.issubset(table_names), f"Missing tables: {expected_tables - table_names}"
 

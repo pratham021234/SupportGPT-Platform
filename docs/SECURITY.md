@@ -36,12 +36,41 @@ The configuration engine enforces strict runtime validation:
 
 ---
 
-## 3. Security Boundary & Planned Milestones
+## 3. Active Security Controls (Phase 02 Authentication & Authorization)
 
-| Security Milestone | Scheduled Phase | Description |
+### A. Argon2id Password Security & Constant-Time Verification
+- **Argon2id Hasher**: Configured with memory cost 64MB (65536 KiB), 3 time iterations, and 4 parallel threads.
+- **Timing Attack Neutralization**: When a non-existent account email is supplied to `/api/v1/auth/login`, the system executes an automated constant-time verification against a pre-computed dummy Argon2id hash (`_DUMMY_ARGON2_HASH`), eliminating timing-based email enumeration.
+- **Zero Plaintext Credentials**: Plaintext passwords are validated in memory and immediately discarded. Password hashes are never returned in API payloads or serialized into logging contexts.
+
+### B. Server-Side Revocable Session Lifecycle
+- **Opaque Token Issuance**: Sessions issue 256-bit cryptographically secure random tokens (`secrets.token_urlsafe(32)`).
+- **One-Way Token Hashing**: Databases store only the SHA-256 hash of the token (`session_token_hash`). If the database snapshot is compromised, active session tokens cannot be derived.
+- **Transport Security**: Transported via `HttpOnly`, `SameSite=Lax` cookies (`SESSION_COOKIE_SECURE=True` enforced in staging/production) and optional `Authorization: Bearer <token>` headers.
+- **Instant Revocation**: Calling `/api/v1/auth/logout` revokes the session record in the database immediately, invalidating any subsequent requests using that token.
+
+### C. Multi-Tenant Authorization & Centralized RBAC
+- **Untrusted Client Inputs**: Organization IDs, user IDs, or roles sent in request headers or bodies are NEVER treated as authorization authority.
+- **Request Context Verification**: Every organization-scoped endpoint requires `OrganizationContext`, which validates caller authentication, active account status, target organization existence, and active membership status.
+- **Least-Privilege Role Model**: Strict role hierarchy (`owner` > `admin` > `agent` > `viewer`).
+- **Privilege Escalation Guards**:
+  - `admin` cannot grant `owner` or `admin` roles, preventing unauthorized escalation or peer creation.
+  - Demoting or revoking the final active `owner` in an organization is strictly blocked (`403 Forbidden`).
+  - Revoked or suspended memberships immediately terminate all organization access.
+
+### D. PostgreSQL Row-Level Security (RLS)
+- **Database Engine Isolation**: PostgreSQL Row-Level Security (RLS) is enabled with `FORCE ROW LEVEL SECURITY` on all tenant-owned tables (`tickets`, `conversations`, `messages`, `attachments`, `ticket_events`, `customers`, `customer_identities`).
+- **Transaction-Local Isolation**: Context is established via `SELECT set_config('app.current_organization_id', :org_id, true)`. The `is_local=true` flag guarantees that the session variable automatically resets on transaction commit or rollback, preventing tenant leakage across connection pool reuse.
+- **Fail-Closed Default**: Queries with missing or unset tenant context return 0 rows and reject all inserts.
+
+---
+
+## 4. Security Boundary & Planned Milestones
+
+| Security Milestone | Status | Description |
 |---|---|---|
-| **Multi-Tenant Row-Level Security (RLS)** | Phase 02 | PostgreSQL RLS policies enforcing tenant isolation at the database engine level via transaction-scoped `SET LOCAL app.current_tenant_id`. |
-| **Authentication & RBAC** | Phase 02 | Secure user authentication, session token verification, organization memberships, and role-based permissions. |
+| **Multi-Tenant Row-Level Security (RLS)** | **Active (Phase 02)** | PostgreSQL RLS policies enforcing tenant isolation via transaction-scoped `set_config('app.current_organization_id', ..., true)`. |
+| **Authentication & RBAC** | **Active (Phase 02)** | Argon2id password hashing, server-side revocable sessions, organization memberships, and role-based access control. |
 | **Webhook Verification & Idempotency** | Phase 03 | Cryptographic signature validation (HMAC-SHA256), replay protection, and idempotent event processing. |
 | **Claim-Level Hallucination Guard** | Phase 05 | Automated decomposition of model completions into atomic claims, checking evidence grounding before delivery. |
 | **Policy Approval Gates** | Phase 06 | Fine-grained intervention gates requiring dual authorization for sensitive actions. |
@@ -49,6 +78,7 @@ The configuration engine enforces strict runtime validation:
 
 ---
 
-## 4. Vulnerability Reporting
+## 5. Vulnerability Reporting
 For vulnerability disclosures and security findings, contact:  
 `security@supportgpt.ai`
+

@@ -25,6 +25,10 @@ class StructuredJsonFormatter(logging.Formatter):
         "api_key",
         "access_token",
         "private_key",
+        "cookie",
+        "session",
+        "credential",
+        "hash",
     }
 
     def format(self, record: logging.LogRecord) -> str:

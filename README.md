@@ -6,7 +6,7 @@ SupportGPT AI is a commercial-grade, multi-tenant B2B SaaS platform engineered f
 
 ---
 
-## 1. Engineering Status: Phase 00 & Phase 01 Completed
+## 1. Engineering Status: Phase 00, Phase 01 & Phase 02 Completed
 
 - **Phase 00 Foundation & Standards**:
   - **Architecture**: Modular Monolith with clean domain boundaries (`api/`, `core/`, `db/`, `models/`, `schemas/`, `ai/`).
@@ -19,6 +19,14 @@ SupportGPT AI is a commercial-grade, multi-tenant B2B SaaS platform engineered f
   - **Database-Enforced Tenant Consistency**: Composite foreign keys spanning `(ticket_id, organization_id)`, `(conversation_id, organization_id)`, `(message_id, organization_id)`.
   - **Deletion Safeguards**: Strict `ON DELETE RESTRICT` on organization and customer relationships to prevent accidental data destruction.
   - **Alembic Migrations**: `0001_initial_foundation` and `0002_canonical_domain_model` with verified transactional upgrade and downgrade DDL.
+- **Phase 02 Authentication, Organization Membership, RBAC & Tenant Isolation**:
+  - **Secure User Accounts**: UUID-keyed `User` entity, normalized emails, Argon2id password hashing (64MB memory, 3 iterations), side-channel constant-time verification.
+  - **Revocable Session Lifecycle**: Server-side `UserSession` with opaque 256-bit entropy tokens, SHA-256 token hash storage, `HttpOnly` / `SameSite=Lax` cookies, Bearer fallback, and instant logout revocation.
+  - **Centralized RBAC**: 4 explicit enterprise roles (`owner`, `admin`, `agent`, `viewer`), permission matrix, least-privilege enforcement, privilege escalation blocks, and last-owner protection.
+  - **Organization Context & Scoped Queries**: Request-level `OrganizationContext` resolving memberships, and `TenantScopedQuery` enforcing tenant-scoped filtering with 404 responses on cross-tenant access to prevent direct-ID existence leakage.
+  - **PostgreSQL Row-Level Security (RLS)**: Active RLS with `FORCE ROW LEVEL SECURITY` across 7 tenant tables, transactional context via `SELECT set_config('app.current_organization_id', :org_id, true)`.
+  - **Alembic Migration**: `0003_auth_membership_rbac` with verified upgrade and downgrade paths.
+  - **Frontend Integration**: Real Next.js login interface (`/login`), typed API client with credentials, session-aware app header, and live logout.
 
 ---
 
@@ -127,3 +135,4 @@ cmd /c npm run build
 - [ADR 0002: Async SQLAlchemy & Alembic](docs/adr/0002-async-sqlalchemy-and-alembic.md)
 - [ADR 0003: Multi-Tenancy & PostgreSQL RLS Strategy](docs/adr/0003-tenant-isolation-and-rls-strategy.md)
 - [ADR 0004: Canonical Domain Model & Tenant Integrity](docs/adr/0004-canonical-domain-model-and-tenant-integrity.md)
+- [ADR 0005: Production Authentication, Session Lifecycle, RBAC & PostgreSQL RLS](docs/adr/0005-production-authentication-and-rbac.md)

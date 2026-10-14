@@ -52,14 +52,19 @@ graph TD
 
 ---
 
-### Phase 02: Multi-Tenancy Architecture, Organizations, RBAC & PostgreSQL RLS
-- **Status**: Scheduled
+### Phase 02: Production-Oriented Authentication, Organization Membership, RBAC & Tenant Isolation
+- **Status**: **COMPLETE / VERIFIED**
 - **Dependencies**: Phase 00, Phase 01
-- **Scope**:
-  - Organization workspace entities and user membership schemas.
-  - PostgreSQL Row-Level Security (RLS) enforcement via transaction-scoped `SET LOCAL app.current_tenant_id`.
-  - JWT session token authentication and role-based access control (RBAC).
-  - Adversarial tenant isolation test suite.
+- **Scope & Deliverables**:
+  - Secure `User` account model with Argon2id cryptographic password hashing, strict email canonicalization, and account status controls.
+  - Associative `OrganizationMembership` model supporting multi-org memberships per user, multi-user orgs, and unique relational constraints.
+  - Server-side revocable `UserSession` tracking with SHA-256 token hashing, HttpOnly secure cookies, and optional Bearer token authorization.
+  - Centralized Role-Based Access Control (RBAC) with explicit role-permission matrix (`owner`, `admin`, `agent`, `viewer`), least-privilege enforcement, privilege escalation guards, and last-owner protection.
+  - Request-level `OrganizationContext` dependency and `TenantScopedQuery` repository abstraction ensuring strict tenant isolation.
+  - Live PostgreSQL Row-Level Security (RLS) enforcement on all tenant tables (`tickets`, `conversations`, `messages`, `attachments`, `ticket_events`, `customers`, `customer_identities`) with transaction-local context (`set_config('app.current_organization_id', ..., true)`).
+  - Alembic migration `0003_auth_membership_rbac` with verified upgrade and reversible downgrade.
+  - Next.js `/login` interface connecting to the real backend with typed client methods and real-time validation.
+  - Full automated test suite (60 tests passed, 0 failures, 1 optional container probe skipped).
 
 ---
 

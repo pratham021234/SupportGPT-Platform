@@ -48,6 +48,42 @@ class ServiceUnavailableException(AppException):
         )
 
 
+class AuthenticationException(AppException):
+    def __init__(self, message: str = "Authentication required or invalid credentials.") -> None:
+        super().__init__(
+            message=message,
+            code="AUTHENTICATION_FAILED",
+            status_code=status.HTTP_401_UNAUTHORIZED,
+        )
+
+
+class ForbiddenException(AppException):
+    def __init__(self, message: str = "Operation not permitted for the current identity or role.") -> None:
+        super().__init__(
+            message=message,
+            code="PERMISSION_DENIED",
+            status_code=status.HTTP_403_FORBIDDEN,
+        )
+
+
+class ConflictException(AppException):
+    def __init__(self, message: str, code: str = "RESOURCE_CONFLICT") -> None:
+        super().__init__(
+            message=message,
+            code=code,
+            status_code=status.HTTP_409_CONFLICT,
+        )
+
+
+class RateLimitExceededException(AppException):
+    def __init__(self, message: str = "Too many requests. Please wait before retrying.") -> None:
+        super().__init__(
+            message=message,
+            code="RATE_LIMIT_EXCEEDED",
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+        )
+
+
 def register_error_handlers(app: FastAPI) -> None:
     """Register uniform RFC 7807/structured error handlers with the FastAPI application."""
 

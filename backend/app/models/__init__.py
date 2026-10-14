@@ -12,16 +12,20 @@ from app.models.enums import (
     IdentityType,
     IdentityVerificationStatus,
     IngestionStatus,
+    MembershipRole,
+    MembershipStatus,
     MessageDirection,
     OrganizationStatus,
     TicketChannel,
     TicketEventType,
     TicketPriority,
     TicketStatus,
+    UserStatus,
     can_transition_ticket_status,
 )
 from app.models.foundation import SystemEventLog
 from app.models.ingestion_receipt import IngestionReceipt
+from app.models.membership import OrganizationMembership
 from app.models.message import Message
 from app.models.organization import (
     Organization,
@@ -29,8 +33,10 @@ from app.models.organization import (
     allocate_next_ticket_number,
     normalize_organization_slug,
 )
+from app.models.session import UserSession
 from app.models.ticket import Ticket
 from app.models.ticket_event import TicketEvent
+from app.models.user import User
 
 __all__ = [
     # System & Audit
@@ -51,9 +57,16 @@ __all__ = [
     "Attachment",
     "TicketEvent",
     "IngestionReceipt",
+    # Identity, Accounts & Memberships
+    "User",
+    "OrganizationMembership",
+    "UserSession",
     # Enums & Domain Rules
     "OrganizationStatus",
     "CustomerStatus",
+    "UserStatus",
+    "MembershipRole",
+    "MembershipStatus",
     "IdentityType",
     "IdentityVerificationStatus",
     "TicketStatus",
