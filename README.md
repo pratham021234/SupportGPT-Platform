@@ -6,7 +6,7 @@ SupportGPT AI is a commercial-grade, multi-tenant B2B SaaS platform engineered f
 
 ---
 
-## 1. Engineering Status: Phase 00, Phase 01, Phase 02 & Phase 03 Completed
+## 1. Engineering Status: Phase 00, Phase 01, Phase 02, Phase 03 & Phase 04 Completed
 
 - **Phase 00 Foundation & Standards**:
   - **Architecture**: Modular Monolith with clean domain boundaries (`api/`, `core/`, `db/`, `models/`, `schemas/`, `ai/`).
@@ -36,6 +36,14 @@ SupportGPT AI is a commercial-grade, multi-tenant B2B SaaS platform engineered f
   - **Append-Only Audit Trail**: Immutable `TicketEvent` history committed atomically with ticket mutations.
   - **Alembic Migration**: `0004_ticket_concurrency_version` with verified reversible upgrade and downgrade.
   - **Frontend Integration**: Real Next.js `/tickets` management console with live listing, creation, conversation inspection, status transitions, and optimistic concurrency reloading.
+- **Phase 04 Reliable Event Ingestion, Webhooks, Idempotency, Background Processing & Connector Foundation**:
+  - **Organization Source Configuration**: Scoped `EventSource` entity with secure secret generation, cryptographic hash indexing, preview masking, and AES-CTR encryption at rest.
+  - **Inbound Webhook Verification**: Constant-time HMAC-SHA256 signature verification over raw request bytes, 300-second timestamp replay window rejection, and 1 MB payload limits.
+  - **Durable Event Receipt & Deduplication**: PostgreSQL `ingestion_receipts` table acting as durable system of record with database-level uniqueness on `(organization_id, source_provider, external_event_id)` and payload digest comparison (202 Accepted on new events, 200 OK on duplicate delivery, 409 Conflict on payload mismatch).
+  - **Asynchronous Background Worker**: Non-blocking `IngestionWorker` with transactional `FOR UPDATE SKIP LOCKED` job claiming, crash recovery via lease expiration reclamation, and exponential backoff with jitter on retries.
+  - **Canonical Event Normalization & Domain Mapping**: Typed `CanonicalEvent` normalization and idempotent application to `Customer`, `Ticket`, `Conversation`, and `Message` models.
+  - **Operational Observability & Replay**: Restricted API endpoints for receipt inspection, sanitized error summaries, worker health diagnostics, and idempotent dead-letter replay.
+  - **Alembic Migration**: `0005_event_ingestion_subsystem` applied to both `supportgpt_db` and `supportgpt_test_db`.
 
 ---
 
@@ -146,3 +154,5 @@ cmd /c npm run build
 - [ADR 0004: Canonical Domain Model & Tenant Integrity](docs/adr/0004-canonical-domain-model-and-tenant-integrity.md)
 - [ADR 0005: Production Authentication, Session Lifecycle, RBAC & PostgreSQL RLS](docs/adr/0005-production-authentication-and-rbac.md)
 - [ADR 0006: Ticket Management, Conversation Services & Concurrency Control](docs/adr/0006-ticket-management-and-conversation-services.md)
+- [ADR 0007: Reliable Event Ingestion, Webhooks & Background Worker Architecture](docs/adr/0007-reliable-event-ingestion-and-worker-architecture.md)
+

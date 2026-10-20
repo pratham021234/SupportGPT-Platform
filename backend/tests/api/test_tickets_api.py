@@ -24,7 +24,9 @@ from app.models.user import User
 
 
 @pytest.fixture
-async def ticket_test_context() -> AsyncIterator[tuple[AsyncClient, AsyncSession, Organization, User, User]]:
+async def ticket_test_context() -> AsyncIterator[
+    tuple[AsyncClient, AsyncSession, Organization, User, User]
+]:
     """Create test environment with organization, owner/agent user, and viewer user."""
     engine = create_async_engine("sqlite+aiosqlite:///:memory:", echo=False)
     async with engine.begin() as conn:
@@ -47,7 +49,9 @@ async def ticket_test_context() -> AsyncIterator[tuple[AsyncClient, AsyncSession
 
     async with session_factory() as db:
         # 1. Organization
-        org = Organization(name="Acme Support", slug="acme-support", status=OrganizationStatus.ACTIVE)
+        org = Organization(
+            name="Acme Support", slug="acme-support", status=OrganizationStatus.ACTIVE
+        )
         db.add(org)
         await db.flush()
 

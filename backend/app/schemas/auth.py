@@ -53,7 +53,9 @@ class LoginResponse(BaseModel):
 
     user: UserResponse
     expires_at: datetime
-    token: str | None = Field(default=None, description="Optional bearer token for non-browser API clients")
+    token: str | None = Field(
+        default=None, description="Optional bearer token for non-browser API clients"
+    )
     organizations: list[UserOrganizationSummary]
 
 

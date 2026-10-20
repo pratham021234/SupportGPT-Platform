@@ -49,7 +49,9 @@ async def list_messages(
     limit: int = Query(default=50, ge=1, le=100, description="Max messages to return"),
     offset: int = Query(default=0, ge=0, description="Offset for pagination"),
 ) -> MessageListResponse:
-    items, total = await ConversationService.list_messages(db, context, conversation_id, limit, offset)
+    items, total = await ConversationService.list_messages(
+        db, context, conversation_id, limit, offset
+    )
     return MessageListResponse(
         items=[MessageResponse.model_validate(m) for m in items],
         total=total,
@@ -105,7 +107,9 @@ async def list_message_attachments(
     context: Annotated[OrganizationContext, Depends(get_organization_context)],
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> AttachmentListResponse:
-    items = await ConversationService.list_attachments_for_message(db, context, conversation_id, message_id)
+    items = await ConversationService.list_attachments_for_message(
+        db, context, conversation_id, message_id
+    )
     return AttachmentListResponse(
         items=[AttachmentResponse.model_validate(a) for a in items],
         total=len(items),

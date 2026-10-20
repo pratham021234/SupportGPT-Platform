@@ -89,21 +89,48 @@ The configuration engine enforces strict runtime validation:
 
 ---
 
-## 5. Security Boundary & Planned Milestones
+## 5. Inbound Webhook Verification & Cryptographic Secret Protection (Phase 04)
+
+### A. Constant-Time HMAC-SHA256 Signature Verification
+- Inbound webhooks are authenticated via HMAC-SHA256 evaluated over raw request bytes (`await request.body()`).
+- Verification compares signatures using Python's `hmac.compare_digest` to eliminate timing side-channel attacks.
+- Missing or invalid signatures terminate execution immediately with `401 Unauthorized` (`SIGNATURE_VERIFICATION_FAILED`).
+
+### B. Replay Window Defense
+- The webhook reception boundary enforces a maximum 300-second (5-minute) clock-skew window via timestamp headers (`x-supportgpt-timestamp`).
+- Requests with timestamps outside this tolerance window are rejected with `400 Bad Request` (`TIMESTAMP_OUTSIDE_TOLERANCE`), neutralizing replay attacks.
+
+### C. Payload Size Bounds & Content-Type Validation
+- Strict 1 MB request body bounds (`MAX_WEBHOOK_PAYLOAD_BYTES = 1_048_576`). Payloads exceeding this limit fail fast with `413 Content Too Large` (`PAYLOAD_TOO_LARGE`).
+- Rejects non-JSON media types with `415 Unsupported Media Type` (`UNSUPPORTED_MEDIA_TYPE`).
+
+### D. Provider Secret Encryption at Rest
+- Secrets are generated with high cryptographic entropy (`secrets.token_urlsafe(32)` prefixed with `whsec_`).
+- Plaintext secrets are never stored in the database. Secrets are symmetrically encrypted at rest using AES-CTR mode stream cipher with per-secret random IVs derived from `settings.signing_secret_encryption_key`.
+- Database storage includes `signing_secret_hash` (SHA-256) for lookups and `signing_secret_preview` for masked operator display (e.g., `whsec_abc...`). Plaintext secret values are never returned in read/list API contracts.
+
+### E. Database-Level Deduplication & Digest Integrity
+- Unique composite index `(organization_id, source_provider, external_event_id)` prevents duplicate records at the database engine level.
+- Identical event IDs received with mismatched payload digests are flagged as integrity violations and rejected with `409 Conflict` (`PAYLOAD_DIGEST_MISMATCH`).
+
+---
+
+## 6. Security Boundary & Planned Milestones
 
 | Security Milestone | Status | Description |
 |---|---|---|
-| **Multi-Tenant Row-Level Security (RLS)** | **Active (Phase 02/03)** | PostgreSQL RLS policies enforcing tenant isolation via transaction-scoped `set_config('app.current_organization_id', ..., true)`. |
+| **Multi-Tenant Row-Level Security (RLS)** | **Active (Phase 02/03/04)** | PostgreSQL RLS policies enforcing tenant isolation via transaction-scoped `set_config('app.current_organization_id', ..., true)`. |
 | **Authentication & RBAC** | **Active (Phase 02)** | Argon2id password hashing, server-side revocable sessions, organization memberships, and role-based access control. |
 | **Ticket & Conversation Authorization** | **Active (Phase 03)** | Direct-ID attack resistance, OCC conflict prevention, author impersonation blocks, and atomic event audit trails. |
-| **Inbound Webhook Verification** | Phase 04 | Cryptographic signature validation (HMAC-SHA256), replay protection, and idempotent event processing. |
+| **Inbound Webhook Verification & Secrets** | **Active (Phase 04)** | Cryptographic signature validation (HMAC-SHA256), replay protection, AES-CTR secret encryption, and idempotent event processing. |
 | **Claim-Level Hallucination Guard** | Phase 05 | Automated decomposition of model completions into atomic claims, checking evidence grounding before delivery. |
 | **Policy Approval Gates** | Phase 06 | Fine-grained intervention gates requiring dual authorization for sensitive actions. |
 | **PII Redaction & Sanitization** | Phase 07 | Automated masking of customer Personally Identifiable Information in forensic trace logs. |
 
 ---
 
-## 6. Vulnerability Reporting
+## 7. Vulnerability Reporting
 For vulnerability disclosures and security findings, contact:  
 `security@supportgpt.ai`
+
 

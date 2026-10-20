@@ -110,10 +110,28 @@ class TicketEventType(StrEnum):
     COMMENT_ADDED = "comment_added"
 
 
+class SourceStatus(StrEnum):
+    ACTIVE = "active"
+    INACTIVE = "inactive"
+    REVOKED = "revoked"
+
+
+class SourceProvider(StrEnum):
+    GENERIC_WEBHOOK = "generic_webhook"
+    CUSTOM_API = "custom_api"
+    EMAIL_POSTMARK = "email_postmark"
+    EMAIL_SENDGRID = "email_sendgrid"
+    ZENDESK = "zendesk"
+
+
 class IngestionStatus(StrEnum):
     RECEIVED = "received"
+    QUEUED = "queued"
     PROCESSING = "processing"
+    RETRY_WAIT = "retry_wait"
     PROCESSED = "processed"
+    DEAD_LETTER = "dead_letter"
+    QUARANTINED = "quarantined"
     DUPLICATE = "duplicate"
     FAILED = "failed"
     IGNORED = "ignored"

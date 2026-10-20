@@ -46,7 +46,9 @@ async def org_test_env() -> AsyncIterator[dict]:
     async with AsyncClient(transport=transport, base_url="http://testserver") as client:
         async with session_factory() as db:
             # 1. Create Organization Alpha
-            org_alpha = Organization(name="Alpha Corp", slug="alpha-corp", status=OrganizationStatus.ACTIVE)
+            org_alpha = Organization(
+                name="Alpha Corp", slug="alpha-corp", status=OrganizationStatus.ACTIVE
+            )
             db.add(org_alpha)
 
             # 2. Create Users
@@ -206,7 +208,10 @@ async def test_admin_cannot_escalate_to_owner(org_test_env: dict):
         },
     )
     assert response.status_code == 403
-    assert "not authorized to assign the privileged 'owner' role" in response.json()["error"]["message"]
+    assert (
+        "not authorized to assign the privileged 'owner' role"
+        in response.json()["error"]["message"]
+    )
 
 
 @pytest.mark.asyncio
@@ -279,4 +284,6 @@ async def test_admin_cannot_demote_owner(org_test_env: dict):
         json={"role": "agent"},
     )
     assert response.status_code == 403
-    assert "not authorized to modify a member with role 'owner'" in response.json()["error"]["message"]
+    assert (
+        "not authorized to modify a member with role 'owner'" in response.json()["error"]["message"]
+    )

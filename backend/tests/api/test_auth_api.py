@@ -51,7 +51,9 @@ async def auth_test_context() -> AsyncIterator[tuple[AsyncClient, AsyncSession]]
 
 
 @pytest.mark.asyncio
-async def test_login_successful_and_cookie_issued(auth_test_context: tuple[AsyncClient, AsyncSession]):
+async def test_login_successful_and_cookie_issued(
+    auth_test_context: tuple[AsyncClient, AsyncSession],
+):
     """Verify login succeeds with valid credentials, setting HttpOnly cookie and returning sanitized profile."""
     client, db = auth_test_context
 
@@ -132,7 +134,9 @@ async def test_login_invalid_password(auth_test_context: tuple[AsyncClient, Asyn
 
 
 @pytest.mark.asyncio
-async def test_login_nonexistent_user_returns_generic_error(auth_test_context: tuple[AsyncClient, AsyncSession]):
+async def test_login_nonexistent_user_returns_generic_error(
+    auth_test_context: tuple[AsyncClient, AsyncSession],
+):
     """Verify that non-existent users receive the exact same error message to prevent email enumeration."""
     client, _ = auth_test_context
 
@@ -197,9 +201,13 @@ async def test_logout_and_session_invalidation(auth_test_context: tuple[AsyncCli
     assert me_res.status_code == 200
 
     # 3. Logout
-    logout_res = await client.post("/api/v1/auth/logout", headers={"Authorization": f"Bearer {token}"})
+    logout_res = await client.post(
+        "/api/v1/auth/logout", headers={"Authorization": f"Bearer {token}"}
+    )
     assert logout_res.status_code == 200
 
     # 4. Attempt to access /me after logout
-    post_logout_res = await client.get("/api/v1/auth/me", headers={"Authorization": f"Bearer {token}"})
+    post_logout_res = await client.get(
+        "/api/v1/auth/me", headers={"Authorization": f"Bearer {token}"}
+    )
     assert post_logout_res.status_code == 401

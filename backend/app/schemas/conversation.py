@@ -13,8 +13,12 @@ class ConversationCreateRequest(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    channel_type: TicketChannel = Field(default=TicketChannel.EMAIL, description="Medium for thread")
-    external_thread_id: str | None = Field(default=None, max_length=255, description="External thread ID")
+    channel_type: TicketChannel = Field(
+        default=TicketChannel.EMAIL, description="Medium for thread"
+    )
+    external_thread_id: str | None = Field(
+        default=None, max_length=255, description="External thread ID"
+    )
 
 
 class ConversationResponse(BaseModel):

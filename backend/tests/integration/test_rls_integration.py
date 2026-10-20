@@ -5,7 +5,9 @@ import uuid
 import asyncpg
 import pytest
 
-POSTGRES_TEST_URL = "postgresql://supportgpt_user:supportgpt_dev_password@localhost:5432/supportgpt_test_db"
+POSTGRES_TEST_URL = (
+    "postgresql://supportgpt_user:supportgpt_dev_password@localhost:5432/supportgpt_test_db"
+)
 
 
 @pytest.mark.asyncio
@@ -57,7 +59,9 @@ async def test_live_postgresql_rls_enforcement():
 
         # 1. Insert Ticket A under Tenant Alpha context
         async with conn.transaction():
-            await conn.execute("SELECT set_config('app.current_organization_id', $1, true);", str(org_a_id))
+            await conn.execute(
+                "SELECT set_config('app.current_organization_id', $1, true);", str(org_a_id)
+            )
             await conn.execute(
                 "INSERT INTO tickets (id, organization_id, ticket_number, ticket_reference, subject, status, priority, channel, created_at, updated_at) "
                 "VALUES ($1, $2, 101, 'RLS-101', 'RLS Ticket Alpha', 'open', 'medium', 'web', NOW(), NOW());",
@@ -68,7 +72,9 @@ async def test_live_postgresql_rls_enforcement():
         # 2. Verify Cross-Tenant Write Denial: Attempt to insert Org B ticket while context is Org A
         with pytest.raises(asyncpg.exceptions.InsufficientPrivilegeError):
             async with conn.transaction():
-                await conn.execute("SELECT set_config('app.current_organization_id', $1, true);", str(org_a_id))
+                await conn.execute(
+                    "SELECT set_config('app.current_organization_id', $1, true);", str(org_a_id)
+                )
                 await conn.execute(
                     "INSERT INTO tickets (id, organization_id, ticket_number, ticket_reference, subject, status, priority, channel, created_at, updated_at) "
                     "VALUES ($1, $2, 102, 'RLS-102', 'RLS Ticket Beta Illegal', 'open', 'high', 'email', NOW(), NOW());",
@@ -78,7 +84,9 @@ async def test_live_postgresql_rls_enforcement():
 
         # 3. Insert Ticket B under Tenant Beta context
         async with conn.transaction():
-            await conn.execute("SELECT set_config('app.current_organization_id', $1, true);", str(org_b_id))
+            await conn.execute(
+                "SELECT set_config('app.current_organization_id', $1, true);", str(org_b_id)
+            )
             await conn.execute(
                 "INSERT INTO tickets (id, organization_id, ticket_number, ticket_reference, subject, status, priority, channel, created_at, updated_at) "
                 "VALUES ($1, $2, 102, 'RLS-102', 'RLS Ticket Beta', 'open', 'high', 'email', NOW(), NOW());",
@@ -88,32 +96,50 @@ async def test_live_postgresql_rls_enforcement():
 
         # 4. Query with Tenant Alpha context
         async with conn.transaction():
-            await conn.execute("SELECT set_config('app.current_organization_id', $1, true);", str(org_a_id))
-            rows = await conn.fetch("SELECT id, organization_id, subject FROM tickets WHERE id IN ($1, $2);", ticket_a_id, ticket_b_id)
+            await conn.execute(
+                "SELECT set_config('app.current_organization_id', $1, true);", str(org_a_id)
+            )
+            rows = await conn.fetch(
+                "SELECT id, organization_id, subject FROM tickets WHERE id IN ($1, $2);",
+                ticket_a_id,
+                ticket_b_id,
+            )
             assert len(rows) == 1
             assert rows[0]["id"] == ticket_a_id
             assert rows[0]["organization_id"] == org_a_id
 
         # 5. Query with Tenant Beta context
         async with conn.transaction():
-            await conn.execute("SELECT set_config('app.current_organization_id', $1, true);", str(org_b_id))
-            rows = await conn.fetch("SELECT id, organization_id, subject FROM tickets WHERE id IN ($1, $2);", ticket_a_id, ticket_b_id)
+            await conn.execute(
+                "SELECT set_config('app.current_organization_id', $1, true);", str(org_b_id)
+            )
+            rows = await conn.fetch(
+                "SELECT id, organization_id, subject FROM tickets WHERE id IN ($1, $2);",
+                ticket_a_id,
+                ticket_b_id,
+            )
             assert len(rows) == 1
             assert rows[0]["id"] == ticket_b_id
             assert rows[0]["organization_id"] == org_b_id
 
         # 6. Query with missing / unset context (must return 0 rows under RLS)
         async with conn.transaction():
-            rows = await conn.fetch("SELECT id FROM tickets WHERE id IN ($1, $2);", ticket_a_id, ticket_b_id)
+            rows = await conn.fetch(
+                "SELECT id FROM tickets WHERE id IN ($1, $2);", ticket_a_id, ticket_b_id
+            )
             assert len(rows) == 0
 
         # 7. Clean up test records under their authorized contexts
         async with conn.transaction():
-            await conn.execute("SELECT set_config('app.current_organization_id', $1, true);", str(org_a_id))
+            await conn.execute(
+                "SELECT set_config('app.current_organization_id', $1, true);", str(org_a_id)
+            )
             await conn.execute("DELETE FROM tickets WHERE id = $1;", ticket_a_id)
 
         async with conn.transaction():
-            await conn.execute("SELECT set_config('app.current_organization_id', $1, true);", str(org_b_id))
+            await conn.execute(
+                "SELECT set_config('app.current_organization_id', $1, true);", str(org_b_id)
+            )
             await conn.execute("DELETE FROM tickets WHERE id = $1;", ticket_b_id)
 
         await conn.execute("DELETE FROM organizations WHERE id IN ($1, $2);", org_a_id, org_b_id)
@@ -161,7 +187,9 @@ async def test_live_postgresql_rls_conversations_and_messages():
 
         # Seed Ticket & Conversation for Org A
         async with conn.transaction():
-            await conn.execute("SELECT set_config('app.current_organization_id', $1, true);", str(org_a))
+            await conn.execute(
+                "SELECT set_config('app.current_organization_id', $1, true);", str(org_a)
+            )
             await conn.execute(
                 "INSERT INTO tickets (id, organization_id, ticket_number, ticket_reference, subject, status, priority, channel, created_at, updated_at) "
                 "VALUES ($1, $2, 201, 'RLS-201', 'Ticket A', 'open', 'medium', 'email', NOW(), NOW());",
@@ -185,7 +213,9 @@ async def test_live_postgresql_rls_conversations_and_messages():
 
         # Seed Ticket & Conversation for Org B
         async with conn.transaction():
-            await conn.execute("SELECT set_config('app.current_organization_id', $1, true);", str(org_b))
+            await conn.execute(
+                "SELECT set_config('app.current_organization_id', $1, true);", str(org_b)
+            )
             await conn.execute(
                 "INSERT INTO tickets (id, organization_id, ticket_number, ticket_reference, subject, status, priority, channel, created_at, updated_at) "
                 "VALUES ($1, $2, 202, 'RLS-202', 'Ticket B', 'open', 'high', 'email', NOW(), NOW());",
@@ -210,7 +240,9 @@ async def test_live_postgresql_rls_conversations_and_messages():
         # 1. Cross-Tenant Message Write: Attempt to insert Org B message while in Org A context -> RLS Denies
         with pytest.raises(asyncpg.exceptions.InsufficientPrivilegeError):
             async with conn.transaction():
-                await conn.execute("SELECT set_config('app.current_organization_id', $1, true);", str(org_a))
+                await conn.execute(
+                    "SELECT set_config('app.current_organization_id', $1, true);", str(org_a)
+                )
                 await conn.execute(
                     "INSERT INTO messages (id, organization_id, conversation_id, direction, author_type, body_text, content_type, sequence_number, delivery_status, created_at) "
                     "VALUES ($1, $2, $3, 'outbound', 'agent', 'Illegal inject', 'text/plain', 2, 'stored', NOW());",
@@ -221,21 +253,29 @@ async def test_live_postgresql_rls_conversations_and_messages():
 
         # 2. Query messages under Org A context -> Only sees msg_a
         async with conn.transaction():
-            await conn.execute("SELECT set_config('app.current_organization_id', $1, true);", str(org_a))
-            rows = await conn.fetch("SELECT id, body_text FROM messages WHERE id IN ($1, $2);", msg_a, msg_b)
+            await conn.execute(
+                "SELECT set_config('app.current_organization_id', $1, true);", str(org_a)
+            )
+            rows = await conn.fetch(
+                "SELECT id, body_text FROM messages WHERE id IN ($1, $2);", msg_a, msg_b
+            )
             assert len(rows) == 1
             assert rows[0]["id"] == msg_a
             assert rows[0]["body_text"] == "Alpha secret message"
 
         # 3. Clean up
         async with conn.transaction():
-            await conn.execute("SELECT set_config('app.current_organization_id', $1, true);", str(org_a))
+            await conn.execute(
+                "SELECT set_config('app.current_organization_id', $1, true);", str(org_a)
+            )
             await conn.execute("DELETE FROM messages WHERE id = $1;", msg_a)
             await conn.execute("DELETE FROM conversations WHERE id = $1;", conv_a)
             await conn.execute("DELETE FROM tickets WHERE id = $1;", ticket_a)
 
         async with conn.transaction():
-            await conn.execute("SELECT set_config('app.current_organization_id', $1, true);", str(org_b))
+            await conn.execute(
+                "SELECT set_config('app.current_organization_id', $1, true);", str(org_b)
+            )
             await conn.execute("DELETE FROM messages WHERE id = $1;", msg_b)
             await conn.execute("DELETE FROM conversations WHERE id = $1;", conv_b)
             await conn.execute("DELETE FROM tickets WHERE id = $1;", ticket_b)

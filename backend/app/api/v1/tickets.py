@@ -56,11 +56,18 @@ async def list_tickets(
     db: Annotated[AsyncSession, Depends(get_db_session)],
     status: TicketStatus | None = Query(default=None, description="Filter by operational status"),
     priority: TicketPriority | None = Query(default=None, description="Filter by priority tier"),
-    assigned_actor_id: str | None = Query(default=None, description="Filter by assigned user or actor ID"),
+    assigned_actor_id: str | None = Query(
+        default=None, description="Filter by assigned user or actor ID"
+    ),
     customer_id: uuid.UUID | None = Query(default=None, description="Filter by customer UUID"),
     channel: TicketChannel | None = Query(default=None, description="Filter by origin channel"),
-    search: str | None = Query(default=None, max_length=100, description="Search keyword in ticket subject"),
-    sort_by: str = Query(default="created_at", description="Field to sort by (created_at, updated_at, priority, status)"),
+    search: str | None = Query(
+        default=None, max_length=100, description="Search keyword in ticket subject"
+    ),
+    sort_by: str = Query(
+        default="created_at",
+        description="Field to sort by (created_at, updated_at, priority, status)",
+    ),
     sort_order: str = Query(default="desc", pattern="^(asc|desc)$", description="Sort order"),
     limit: int = Query(default=20, ge=1, le=100, description="Page limit (max 100)"),
     offset: int = Query(default=0, ge=0, description="Page offset"),

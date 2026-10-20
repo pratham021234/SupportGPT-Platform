@@ -32,7 +32,9 @@ from app.models.user import User
 
 
 @pytest.fixture
-async def conv_test_context() -> AsyncIterator[tuple[AsyncClient, AsyncSession, Organization, User, Ticket, Conversation]]:
+async def conv_test_context() -> AsyncIterator[
+    tuple[AsyncClient, AsyncSession, Organization, User, Ticket, Conversation]
+]:
     """Create test environment with organization, agent user, ticket, and initial conversation."""
     engine = create_async_engine("sqlite+aiosqlite:///:memory:", echo=False)
     async with engine.begin() as conn:
@@ -55,7 +57,9 @@ async def conv_test_context() -> AsyncIterator[tuple[AsyncClient, AsyncSession, 
 
     async with session_factory() as db:
         # Organization
-        org = Organization(name="OmniCorp Support", slug="omnicorp-support", status=OrganizationStatus.ACTIVE)
+        org = Organization(
+            name="OmniCorp Support", slug="omnicorp-support", status=OrganizationStatus.ACTIVE
+        )
         db.add(org)
         await db.flush()
 

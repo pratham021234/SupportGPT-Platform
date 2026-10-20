@@ -223,9 +223,90 @@ To guarantee multi-tenant data consistency at the PostgreSQL engine level, child
 
 ---
 
-## 8. Known Limitations & Deferred Work (Out of Scope for Phase 03)
-1. **Email / IMAP / SMTP Ingestion**: Inbound email parsing, MIME parsing, and automated pipeline ingestion belong to Phase 04.
-2. **AI Generation & Verification**: AI draft generation, RAG, claim extraction, and verification pipelines belong to subsequent phases.
-3. **Binary File Storage**: Attachments manage metadata only (`filename`, `content_type`, `size_bytes`, `scan_status`). Object storage presigned URLs and virus scanning pipelines belong to subsequent phases.
-4. **Billing & Subscriptions**: Stripe/Paddle billing models and seat management are deferred to subsequent phases.
+## 8. Reliable Event Ingestion, Webhook Reception & Background Worker Architecture (Phase 04)
+
+### 8.1 Ingestion Subsystem Overview
+SupportGPT AI ingests external customer support events across multiple providers (generic webhooks, Zendesk, Twilio, SendGrid) and applies them idempotently to canonical domain models (`Ticket`, `Conversation`, `Message`, `Customer`).
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Provider as External Provider
+    participant Edge as Webhook API Boundary
+    participant DB as PostgreSQL (ingestion_receipts)
+    participant Worker as Background IngestionWorker
+    participant Processor as IngestionProcessor
+    participant Domain as Domain Services (Tickets/Conversations)
+
+    Provider->>Edge: POST /api/v1/webhooks/sources/{id} (HMAC signature, timestamp)
+    Edge->>Edge: Verify Signature (constant-time HMAC-SHA256)
+    Edge->>Edge: Validate Timestamp Replay Window (<= 300s)
+    Edge->>DB: Check Deduplication (org_id, provider, external_event_id)
+    alt Duplicate Event with Same Digest
+        Edge-->>Provider: 200 OK (Duplicate Ignored)
+    else Duplicate Event with Differing Digest
+        Edge-->>Provider: 409 Conflict (Payload Digest Mismatch)
+    else New Valid Event
+        Edge->>DB: INSERT IngestionReceipt (status='queued', payload_digest)
+        Edge-->>Provider: 202 Accepted (receipt_id, status='queued')
+    end
+
+    loop Asynchronous Processing Pass
+        Worker->>DB: SELECT FOR UPDATE SKIP LOCKED (status IN ('queued', 'retry_wait'))
+        Worker->>DB: UPDATE locked_by, processing_started_at, status='processing'
+        Worker->>Processor: process_event(CanonicalEvent, receipt)
+        Processor->>Domain: Resolve/Create Customer & Identities
+        Processor->>Domain: Find/Create Ticket (external_reference)
+        Processor->>Domain: Append Inbound Message (external_message_id)
+        alt Success
+            Processor->>DB: UPDATE IngestionReceipt (status='processed', processed_at=NOW())
+        else Transient Error
+            Worker->>DB: UPDATE status='retry_wait', next_attempt_at=NOW()+backoff
+        else Fatal/Max Attempts Exceeded
+            Worker->>DB: UPDATE status='dead_letter', error_code='...'
+        end
+    end
+```
+
+### 8.2 Inbound Security & Verification Boundary
+1. **Constant-Time HMAC-SHA256**: Signatures are evaluated strictly over raw request bytes (`await request.body()`) and compared using `hmac.compare_digest` to prevent timing side-channel attacks.
+2. **Replay Window Guard**: Enforces a strict 300-second (5-minute) clock skew threshold via `x-supportgpt-timestamp`. Requests older than 300 seconds are rejected with `400 Bad Request` (`TIMESTAMP_OUTSIDE_TOLERANCE`).
+3. **Payload Size Bounds**: Requests exceeding 1 MB are terminated immediately with `413 Content Too Large` (`PAYLOAD_TOO_LARGE`).
+4. **Media Type Validation**: Enforces `application/json`. Invalid payloads return `415 Unsupported Media Type` or `422 Unprocessable Content`.
+5. **Secret Protection**: Source signing secrets are generated via `secrets.token_urlsafe(32)` prefixed with `whsec_`. Plaintext secrets are never stored in plain text; secrets are encrypted at rest via AES-CTR stream cipher with random IVs derived from `settings.signing_secret_encryption_key`. Public APIs expose only masked previews (e.g., `whsec_abc...`).
+
+### 8.3 Durable Receipt State Machine
+Accepted events progress through explicit, deterministic lifecycle states:
+
+```mermaid
+stateDiagram-v2
+    [*] --> queued: Durable Webhook Acceptance (202 Accepted)
+    queued --> processing: Worker Claims via FOR UPDATE SKIP LOCKED
+    processing --> processed: Domain Mutations Committed Atomically
+    processing --> retry_wait: Transient Failure (Attempt < Max)
+    retry_wait --> processing: Backoff Expired, Re-claimed by Worker
+    processing --> dead_letter: Fatal Error or Max Attempts (5) Exceeded
+    processing --> quarantined: Ambiguous Identity or Schema Mismatch
+    processing --> processing: Lease Timeout (> 300s) Reclaimed after Crash
+    dead_letter --> queued: Authorized Operator Replay (Re-queued)
+    processed --> [*]
+```
+
+### 8.4 Concurrency & Crash Recovery Guarantee
+1. **Multi-Worker Claiming**: Workers execute transactional queries using PostgreSQL `FOR UPDATE SKIP LOCKED`. Concurrent worker threads claim completely disjoint batches of receipts with zero lock contention.
+2. **Crash Recovery & Lease Expiration**: Jobs claimed by a worker stamp `locked_by` and `processing_started_at`. If a worker process crashes, abandoned jobs exceeding `lease_timeout_seconds` (default 300s) are automatically reclaimed on subsequent passes without operator intervention.
+3. **Exponential Backoff with Jitter**: Retried receipts calculate next execution via `base * 2^(attempt - 1) + jitter`, bounded to a maximum backoff window.
+
+### 8.5 Operational Inspection & Replay
+- Restricted endpoints (`GET /api/v1/organizations/{org_id}/ingestion/receipts`, `POST .../replay`) require `ingestion:read` and `ingestion:manage` permissions.
+- Replaying a failed event reuses the original durable receipt record and resets attempt counters rather than creating duplicate event records, preserving database deduplication constraints.
+
+---
+
+## 9. Known Limitations & Deferred Work (Out of Scope for Phase 04)
+1. **AI Classification & Response Drafting**: LLM prompt pipelines, retrieval-augmented generation (RAG), and response verification are strictly deferred to Phase 05+.
+2. **Outbound Customer Dispatch**: Automatic webhook replies or email dispatch are deferred.
+3. **Email IMAP/SMTP Ingestion**: Specialized email polling and MIME attachments are deferred.
+4. **Billing & Subscriptions**: Stripe/Paddle billing and seat quotas are deferred.
+
 

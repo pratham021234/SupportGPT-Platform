@@ -41,8 +41,16 @@ def upgrade() -> None:
         sa.Column("status", sa.String(30), server_default="active", nullable=False),
         sa.Column("last_login_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("password_changed_at", sa.DateTime(timezone=True), nullable=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
-        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), onupdate=sa.func.now(), nullable=False),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False
+        ),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.func.now(),
+            onupdate=sa.func.now(),
+            nullable=False,
+        ),
         sa.CheckConstraint(
             "status IN ('active', 'suspended', 'disabled')",
             name="ck_users_valid_status",
@@ -75,9 +83,19 @@ def upgrade() -> None:
             sa.ForeignKey("users.id", ondelete="SET NULL"),
             nullable=True,
         ),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
-        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), onupdate=sa.func.now(), nullable=False),
-        sa.UniqueConstraint("organization_id", "user_id", name="uq_organization_memberships_org_user"),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False
+        ),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.func.now(),
+            onupdate=sa.func.now(),
+            nullable=False,
+        ),
+        sa.UniqueConstraint(
+            "organization_id", "user_id", name="uq_organization_memberships_org_user"
+        ),
         sa.CheckConstraint(
             "role IN ('owner', 'admin', 'agent', 'viewer')",
             name="ck_organization_memberships_valid_role",
@@ -87,7 +105,9 @@ def upgrade() -> None:
             name="ck_organization_memberships_valid_status",
         ),
     )
-    op.create_index("ix_organization_memberships_org_id", "organization_memberships", ["organization_id"])
+    op.create_index(
+        "ix_organization_memberships_org_id", "organization_memberships", ["organization_id"]
+    )
     op.create_index("ix_organization_memberships_user_id", "organization_memberships", ["user_id"])
     op.create_index("ix_organization_memberships_role", "organization_memberships", ["role"])
     op.create_index("ix_organization_memberships_status", "organization_memberships", ["status"])
@@ -105,13 +125,22 @@ def upgrade() -> None:
         sa.Column("session_token_hash", sa.String(64), nullable=False),
         sa.Column("ip_address", sa.String(45), nullable=True),
         sa.Column("user_agent", sa.String(500), nullable=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
-        sa.Column("last_active_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False
+        ),
+        sa.Column(
+            "last_active_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.func.now(),
+            nullable=False,
+        ),
         sa.Column("expires_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("revoked_at", sa.DateTime(timezone=True), nullable=True),
     )
     op.create_index("ix_user_sessions_user_id", "user_sessions", ["user_id"])
-    op.create_index("ix_user_sessions_token_hash", "user_sessions", ["session_token_hash"], unique=True)
+    op.create_index(
+        "ix_user_sessions_token_hash", "user_sessions", ["session_token_hash"], unique=True
+    )
     op.create_index("ix_user_sessions_expires_at", "user_sessions", ["expires_at"])
 
     # 4. PostgreSQL Row-Level Security (RLS) policies

@@ -28,9 +28,15 @@ class CustomerCreateRequest(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    display_name: str = Field(..., min_length=1, max_length=255, description="Full name or contact title")
-    company_name: str | None = Field(default=None, max_length=255, description="Optional organization name")
-    external_customer_id: str | None = Field(default=None, max_length=255, description="Optional CRM identifier")
+    display_name: str = Field(
+        ..., min_length=1, max_length=255, description="Full name or contact title"
+    )
+    company_name: str | None = Field(
+        default=None, max_length=255, description="Optional organization name"
+    )
+    external_customer_id: str | None = Field(
+        default=None, max_length=255, description="Optional CRM identifier"
+    )
 
 
 class CustomerListResponse(BaseModel):

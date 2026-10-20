@@ -65,11 +65,15 @@ async def multi_tenant_fixture() -> AsyncIterator[dict]:
     async with AsyncClient(transport=transport, base_url="http://testserver") as client:
         async with session_factory() as db:
             # 1. Organization A (Tenant Alpha)
-            org_a = Organization(name="Tenant Alpha", slug="tenant-alpha", status=OrganizationStatus.ACTIVE)
+            org_a = Organization(
+                name="Tenant Alpha", slug="tenant-alpha", status=OrganizationStatus.ACTIVE
+            )
             db.add(org_a)
 
             # 2. Organization B (Tenant Beta)
-            org_b = Organization(name="Tenant Beta", slug="tenant-beta", status=OrganizationStatus.ACTIVE)
+            org_b = Organization(
+                name="Tenant Beta", slug="tenant-beta", status=OrganizationStatus.ACTIVE
+            )
             db.add(org_b)
             await db.flush()
 

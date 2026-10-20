@@ -26,7 +26,9 @@ from app.models.session import UserSession
 from app.models.user import User
 
 
-def extract_session_token(request: Request, authorization: str | None = Header(default=None)) -> str | None:
+def extract_session_token(
+    request: Request, authorization: str | None = Header(default=None)
+) -> str | None:
     """Extract session token from Authorization header (Bearer) or session cookie."""
     if authorization and authorization.startswith("Bearer "):
         token = authorization[7:].strip()

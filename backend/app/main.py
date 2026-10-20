@@ -4,6 +4,7 @@ Configures lifespan lifecycle, structured logging, middleware pipeline,
 RFC 7807 error handlers, and route hierarchy.
 """
 
+import asyncio
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
@@ -30,9 +31,27 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         f"Starting {settings.APP_NAME} v{settings.APP_VERSION} in [{settings.ENVIRONMENT}] mode"
     )
 
+    worker_task = None
+    worker = None
+    if settings.ENABLE_INGESTION_WORKER and settings.ENVIRONMENT != "test":
+        from app.services.ingestion_worker import get_default_worker
+
+        worker = get_default_worker()
+        worker_task = asyncio.create_task(worker.start())
+        logger.info(f"IngestionWorker [{worker.worker_id}] background task started.")
+
     yield
 
     # Teardown sequence
+    if worker and worker_task:
+        logger.info(f"Stopping IngestionWorker [{worker.worker_id}]...")
+        worker.stop()
+        try:
+            await asyncio.wait_for(worker_task, timeout=5.0)
+        except (TimeoutError, asyncio.CancelledError):
+            pass
+        logger.info("IngestionWorker stopped.")
+
     logger.info("Initiating graceful shutdown: disposing database connection pool...")
     await async_engine.dispose()
     logger.info("Database pool closed. Shutdown complete.")

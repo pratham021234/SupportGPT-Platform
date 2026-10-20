@@ -9,6 +9,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.attachment import Attachment
 from app.models.conversation import Conversation
 from app.models.customer import Customer
+from app.models.event_source import EventSource
+from app.models.ingestion_receipt import IngestionReceipt
 from app.models.message import Message
 from app.models.ticket import Ticket
 from app.models.ticket_event import TicketEvent
@@ -110,6 +112,48 @@ class TenantScopedQuery:
             select(Customer)
             .where(Customer.organization_id == self.organization_id)
             .order_by(Customer.created_at.desc())
+            .limit(limit)
+            .offset(offset)
+        )
+        result = await self.session.execute(query)
+        return result.scalars().all()
+
+    async def get_event_source(self, source_id: uuid.UUID) -> EventSource | None:
+        """Retrieve an event source strictly scoped to the active organization."""
+        query = select(EventSource).where(
+            EventSource.id == source_id,
+            EventSource.organization_id == self.organization_id,
+        )
+        result = await self.session.execute(query)
+        return result.scalar_one_or_none()
+
+    async def get_ingestion_receipt(self, receipt_id: uuid.UUID) -> IngestionReceipt | None:
+        """Retrieve an ingestion receipt strictly scoped to the active organization."""
+        query = select(IngestionReceipt).where(
+            IngestionReceipt.id == receipt_id,
+            IngestionReceipt.organization_id == self.organization_id,
+        )
+        result = await self.session.execute(query)
+        return result.scalar_one_or_none()
+
+    async def list_event_sources(self) -> Sequence[EventSource]:
+        """List event sources strictly within the active organization."""
+        query = (
+            select(EventSource)
+            .where(EventSource.organization_id == self.organization_id)
+            .order_by(EventSource.created_at.desc())
+        )
+        result = await self.session.execute(query)
+        return result.scalars().all()
+
+    async def list_ingestion_receipts(
+        self, limit: int = 50, offset: int = 0
+    ) -> Sequence[IngestionReceipt]:
+        """List ingestion receipts strictly within the active organization."""
+        query = (
+            select(IngestionReceipt)
+            .where(IngestionReceipt.organization_id == self.organization_id)
+            .order_by(IngestionReceipt.received_at.desc())
             .limit(limit)
             .offset(offset)
         )

@@ -30,8 +30,12 @@ class AddMemberRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     email: str = Field(..., max_length=255, description="Email of the user to invite/add")
-    display_name: str = Field(..., min_length=1, max_length=150, description="Display name for the user")
-    role: MembershipRole = Field(default=MembershipRole.AGENT, description="Role to assign to the user")
+    display_name: str = Field(
+        ..., min_length=1, max_length=150, description="Display name for the user"
+    )
+    role: MembershipRole = Field(
+        default=MembershipRole.AGENT, description="Role to assign to the user"
+    )
 
     @field_validator("email")
     @classmethod

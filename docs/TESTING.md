@@ -62,12 +62,13 @@ cmd /c npm run build
 
 ---
 
-## 4. Current Quality Status Summary (Phase 03 Baseline)
-- **Backend Unit Tests**: 100% Passing (31 unit tests covering password hashing, email normalization, token entropy, RBAC matrix, escalation guards, normalization, lifecycle, foreign keys, unique constraints, check constraints).
-- **Backend API Tests**: 100% Passing (44 API tests covering health probes, correlation ID, RFC 7807 errors, login, logout, current user, organization membership, role updates, last-owner protections, cross-tenant access denial, direct ID attack defense, ticket creation, default status/priority, filters, search, pagination, status transition validation, OCC lock_version conflicts, assignment eligibility, deterministic message sequencing, idempotency, author impersonation prevention, and attachment metadata sanitization).
-- **Backend Integration Tests**: 100% Passing (4 integration tests: declarative metadata validation, composite foreign key verification, live PostgreSQL RLS ticket isolation, and live PostgreSQL RLS conversations/messages isolation).
-- **Backend Total**: 79 passed, 0 failures, 1 optional container probe skipped when DB is configured via non-default host.
-- **Backend Linting**: 100% Passing (Ruff zero violations).
+## 4. Current Quality Status Summary (Phase 04 Verified Baseline)
+- **Backend Unit Tests**: 100% Passing (44 unit tests covering password hashing, email normalization, token entropy, RBAC matrix, escalation guards, normalization, lifecycle, foreign keys, unique constraints, check constraints, webhook HMAC-SHA256 signature verification, replay window tolerances, payload size bounds, symmetric secret encryption/decryption at rest, secret preview masking, and canonical event normalization).
+- **Backend API Tests**: 100% Passing (69 API tests covering health probes, correlation ID, RFC 7807 errors, login, logout, current user, organization membership, role updates, last-owner protections, cross-tenant access denial, direct ID attack defense, ticket creation, default status/priority, filters, search, pagination, status transition validation, OCC lock_version conflicts, assignment eligibility, deterministic message sequencing, idempotency, author impersonation prevention, attachment metadata sanitization, webhook signature enforcement, timestamp replay rejection, duplicate receipt handling, payload mismatch conflicts, generic webhook header routing, source configuration, secret rotation, receipt query filters, dead-letter replay, and worker health diagnostics).
+- **Backend Integration Tests**: 100% Passing (9 integration tests: declarative metadata validation, composite foreign key verification, live PostgreSQL RLS ticket isolation, live PostgreSQL RLS conversations/messages isolation, live PostgreSQL RLS on sources & receipts, live PostgreSQL concurrent `FOR UPDATE SKIP LOCKED` worker claim isolation, background worker ticket creation, inbound message appending, lease expiration crash recovery, and dead-letter failure handling).
+- **Backend Total**: **122 passed, 0 failures, 1 skipped** (`test_live_database_connection_probe` explicitly skipped when running in SQLite test mode).
+- **Backend Linting & Formatting**: 100% Passing (Ruff zero violations, clean code formatting).
 - **Frontend Type-Check**: 100% Passing (TypeScript strict mode zero errors).
 - **Frontend Production Build**: 100% Passing (Next.js production bundle compiled cleanly with static prerendering for `/`, `/_not-found`, `/login`, `/modules/[slug]`, `/system`, `/tickets`).
+
 

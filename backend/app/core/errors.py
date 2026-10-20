@@ -58,7 +58,9 @@ class AuthenticationException(AppException):
 
 
 class ForbiddenException(AppException):
-    def __init__(self, message: str = "Operation not permitted for the current identity or role.") -> None:
+    def __init__(
+        self, message: str = "Operation not permitted for the current identity or role."
+    ) -> None:
         super().__init__(
             message=message,
             code="PERMISSION_DENIED",
@@ -81,6 +83,55 @@ class RateLimitExceededException(AppException):
             message=message,
             code="RATE_LIMIT_EXCEEDED",
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+        )
+
+
+class SignatureVerificationException(AppException):
+    def __init__(self, message: str = "Invalid or missing webhook signature.") -> None:
+        super().__init__(
+            message=message,
+            code="SIGNATURE_VERIFICATION_FAILED",
+            status_code=status.HTTP_401_UNAUTHORIZED,
+        )
+
+
+class PayloadSizeLimitException(AppException):
+    def __init__(self, message: str = "Inbound payload exceeds maximum allowed size.") -> None:
+        super().__init__(
+            message=message,
+            code="PAYLOAD_TOO_LARGE",
+            status_code=status.HTTP_413_CONTENT_TOO_LARGE,
+        )
+
+
+class InvalidContentTypeException(AppException):
+    def __init__(self, message: str = "Unsupported or invalid request content-type.") -> None:
+        super().__init__(
+            message=message,
+            code="UNSUPPORTED_MEDIA_TYPE",
+            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+        )
+
+
+class EventReplayWindowException(AppException):
+    def __init__(
+        self, message: str = "Webhook timestamp is outside acceptable clock skew tolerance window."
+    ) -> None:
+        super().__init__(
+            message=message,
+            code="TIMESTAMP_OUTSIDE_TOLERANCE",
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
+
+
+class EventNormalizationException(AppException):
+    def __init__(
+        self, message: str = "Failed to normalize provider event into canonical schema."
+    ) -> None:
+        super().__init__(
+            message=message,
+            code="EVENT_NORMALIZATION_FAILED",
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
         )
 
 

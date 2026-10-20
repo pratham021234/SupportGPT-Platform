@@ -100,6 +100,40 @@ class Settings(BaseSettings):
         description="Redis connection URL for caching and future task orchestration",
     )
 
+    # Ingestion & Webhook Subsystem Configuration
+    INGESTION_WEBHOOK_MAX_PAYLOAD_BYTES: int = Field(
+        default=1_048_576,
+        description="Max allowed bytes for inbound webhook payload (default: 1MB)",
+    )
+    INGESTION_TIMESTAMP_TOLERANCE_SECONDS: int = Field(
+        default=300,
+        description="Max acceptable clock skew/replay window for webhooks in seconds (default: 5 min)",
+    )
+    INGESTION_LEASE_TIMEOUT_SECONDS: int = Field(
+        default=300,
+        description="Worker lease timeout in seconds before hung processing jobs can be reclaimed",
+    )
+    INGESTION_MAX_ATTEMPTS: int = Field(
+        default=5,
+        description="Max worker processing retry attempts before transitioning to dead_letter",
+    )
+    INGESTION_WORKER_POLL_INTERVAL_SECONDS: float = Field(
+        default=2.0,
+        description="Worker loop polling interval in seconds",
+    )
+    INGESTION_WORKER_BATCH_SIZE: int = Field(
+        default=20,
+        description="Max jobs claimed per worker batch",
+    )
+    ENABLE_INGESTION_WORKER: bool = Field(
+        default=True,
+        description="Enable automatic background worker execution on application startup",
+    )
+    WEBHOOK_SECRETS_ENCRYPTION_KEY: str | None = Field(
+        default=None,
+        description="Optional master key for encrypting provider webhook secrets at rest",
+    )
+
     # Vector Storage
     QDRANT_HOST: str = Field(default="localhost", description="Qdrant vector engine host")
     QDRANT_PORT: int = Field(default=6333, description="Qdrant HTTP port")

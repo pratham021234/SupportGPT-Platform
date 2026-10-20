@@ -21,6 +21,12 @@ class Permission(StrEnum):
     CUSTOMERS_READ = "customers:read"
     CUSTOMERS_WRITE = "customers:write"
 
+    # External Sources & Ingestion Operations
+    SOURCES_READ = "sources:read"
+    SOURCES_MANAGE = "sources:manage"
+    INGESTION_READ = "ingestion:read"
+    INGESTION_MANAGE = "ingestion:manage"
+
 
 # Explicit Role-Permission Matrix (Least Privilege)
 ROLE_PERMISSIONS: dict[MembershipRole, set[Permission]] = {
@@ -34,6 +40,10 @@ ROLE_PERMISSIONS: dict[MembershipRole, set[Permission]] = {
         Permission.TICKETS_ASSIGN,
         Permission.CUSTOMERS_READ,
         Permission.CUSTOMERS_WRITE,
+        Permission.SOURCES_READ,
+        Permission.SOURCES_MANAGE,
+        Permission.INGESTION_READ,
+        Permission.INGESTION_MANAGE,
     },
     MembershipRole.ADMIN: {
         Permission.ORG_READ,
@@ -45,6 +55,10 @@ ROLE_PERMISSIONS: dict[MembershipRole, set[Permission]] = {
         Permission.TICKETS_ASSIGN,
         Permission.CUSTOMERS_READ,
         Permission.CUSTOMERS_WRITE,
+        Permission.SOURCES_READ,
+        Permission.SOURCES_MANAGE,
+        Permission.INGESTION_READ,
+        Permission.INGESTION_MANAGE,
     },
     MembershipRole.AGENT: {
         Permission.ORG_READ,
@@ -53,6 +67,8 @@ ROLE_PERMISSIONS: dict[MembershipRole, set[Permission]] = {
         Permission.TICKETS_ASSIGN,
         Permission.CUSTOMERS_READ,
         Permission.CUSTOMERS_WRITE,
+        Permission.SOURCES_READ,
+        Permission.INGESTION_READ,
     },
     MembershipRole.VIEWER: {
         Permission.ORG_READ,

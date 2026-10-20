@@ -61,9 +61,7 @@ async def login(
     # Query user by normalized email
     query = (
         select(User)
-        .options(
-            selectinload(User.memberships).selectinload(OrganizationMembership.organization)
-        )
+        .options(selectinload(User.memberships).selectinload(OrganizationMembership.organization))
         .where(User.email == normalized_email)
     )
     result = await db.execute(query)
@@ -124,7 +122,11 @@ async def login(
     # Collect available active organizations
     org_summaries: list[UserOrganizationSummary] = []
     for m in user.memberships:
-        if m.status == MembershipStatus.ACTIVE and m.organization and m.organization.deleted_at is None:
+        if (
+            m.status == MembershipStatus.ACTIVE
+            and m.organization
+            and m.organization.deleted_at is None
+        ):
             org_summaries.append(
                 UserOrganizationSummary(
                     organization_id=m.organization_id,

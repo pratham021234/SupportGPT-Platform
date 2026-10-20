@@ -16,6 +16,8 @@ from app.models.enums import (
     MembershipStatus,
     MessageDirection,
     OrganizationStatus,
+    SourceProvider,
+    SourceStatus,
     TicketChannel,
     TicketEventType,
     TicketPriority,
@@ -23,6 +25,7 @@ from app.models.enums import (
     UserStatus,
     can_transition_ticket_status,
 )
+from app.models.event_source import EventSource
 from app.models.foundation import SystemEventLog
 from app.models.ingestion_receipt import IngestionReceipt
 from app.models.membership import OrganizationMembership
@@ -57,6 +60,7 @@ __all__ = [
     "Attachment",
     "TicketEvent",
     "IngestionReceipt",
+    "EventSource",
     # Identity, Accounts & Memberships
     "User",
     "OrganizationMembership",
@@ -78,5 +82,7 @@ __all__ = [
     "AttachmentScanStatus",
     "TicketEventType",
     "IngestionStatus",
+    "SourceStatus",
+    "SourceProvider",
     "can_transition_ticket_status",
 ]

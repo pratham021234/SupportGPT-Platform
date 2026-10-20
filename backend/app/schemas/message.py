@@ -14,12 +14,22 @@ class MessageCreateRequest(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    body_text: str = Field(..., min_length=1, max_length=65536, description="Plain text message content")
-    body_rich: dict[str, Any] | None = Field(default=None, description="Optional structured formatted payload")
+    body_text: str = Field(
+        ..., min_length=1, max_length=65536, description="Plain text message content"
+    )
+    body_rich: dict[str, Any] | None = Field(
+        default=None, description="Optional structured formatted payload"
+    )
     content_type: str = Field(default="text/plain", max_length=50, description="MIME content type")
-    direction: MessageDirection = Field(default=MessageDirection.OUTBOUND, description="Message transmission direction")
-    author_type: AuthorType = Field(default=AuthorType.AGENT, description="Author classification category")
-    external_message_id: str | None = Field(default=None, max_length=255, description="Upstream provider message ID for idempotency")
+    direction: MessageDirection = Field(
+        default=MessageDirection.OUTBOUND, description="Message transmission direction"
+    )
+    author_type: AuthorType = Field(
+        default=AuthorType.AGENT, description="Author classification category"
+    )
+    external_message_id: str | None = Field(
+        default=None, max_length=255, description="Upstream provider message ID for idempotency"
+    )
 
 
 class MessageResponse(BaseModel):

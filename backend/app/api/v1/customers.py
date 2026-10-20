@@ -78,7 +78,9 @@ async def create_customer(
         organization_id=context.organization.id,
         display_name=payload.display_name.strip(),
         company_name=payload.company_name.strip() if payload.company_name else None,
-        external_customer_id=payload.external_customer_id.strip() if payload.external_customer_id else None,
+        external_customer_id=payload.external_customer_id.strip()
+        if payload.external_customer_id
+        else None,
         status=CustomerStatus.ACTIVE,
     )
     db.add(customer)

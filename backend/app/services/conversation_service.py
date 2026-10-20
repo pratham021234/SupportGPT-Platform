@@ -20,8 +20,10 @@ from app.models.enums import (
     ConversationStatus,
     MembershipRole,
     MessageDirection,
+    TicketChannel,
 )
 from app.models.message import Message
+from app.models.ticket import Ticket
 from app.schemas.conversation import ConversationCreateRequest
 from app.schemas.message import MessageCreateRequest
 
@@ -58,6 +60,31 @@ class ConversationService:
         return list(res.scalars().all())
 
     @staticmethod
+    async def create_conversation_internal(
+        session: AsyncSession,
+        organization_id: uuid.UUID,
+        ticket_id: uuid.UUID,
+        channel_type: TicketChannel = TicketChannel.API,
+        external_thread_id: str | None = None,
+        auto_commit: bool = True,
+    ) -> Conversation:
+        """Internal conversation creation for background workflows and integrations."""
+        conversation = Conversation(
+            organization_id=organization_id,
+            ticket_id=ticket_id,
+            channel_type=channel_type,
+            external_thread_id=external_thread_id,
+            status=ConversationStatus.ACTIVE,
+        )
+        session.add(conversation)
+        if auto_commit:
+            await session.commit()
+            await session.refresh(conversation)
+        else:
+            await session.flush()
+        return conversation
+
+    @staticmethod
     async def create_conversation(
         session: AsyncSession,
         context: OrganizationContext,
@@ -73,17 +100,14 @@ class ConversationService:
         if not ticket:
             raise ResourceNotFoundException("Ticket", ticket_id)
 
-        conversation = Conversation(
+        return await ConversationService.create_conversation_internal(
+            session=session,
             organization_id=org_id,
             ticket_id=ticket.id,
             channel_type=payload.channel_type,
             external_thread_id=payload.external_thread_id,
-            status=ConversationStatus.ACTIVE,
+            auto_commit=True,
         )
-        session.add(conversation)
-        await session.commit()
-        await session.refresh(conversation)
-        return conversation
 
     @staticmethod
     async def get_conversation(
@@ -140,6 +164,95 @@ class ConversationService:
         return items, total
 
     @staticmethod
+    async def create_message_internal(
+        session: AsyncSession,
+        organization_id: uuid.UUID,
+        conversation_id: uuid.UUID,
+        payload: MessageCreateRequest,
+        author_id: str | None = None,
+        sender_display_name: str | None = None,
+        auto_commit: bool = True,
+    ) -> Message:
+        """Internal message creation for background workers and inbound webhooks."""
+        conv_stmt = select(Conversation).where(
+            Conversation.organization_id == organization_id,
+            Conversation.id == conversation_id,
+        )
+        conv_res = await session.execute(conv_stmt)
+        conv = conv_res.scalar_one_or_none()
+        if not conv:
+            raise ResourceNotFoundException("Conversation", conversation_id)
+
+        # 1. Idempotency check on external_message_id
+        if payload.external_message_id and payload.external_message_id.strip():
+            existing_query = select(Message).where(
+                Message.organization_id == organization_id,
+                Message.external_message_id == payload.external_message_id.strip(),
+            )
+            existing_res = await session.execute(existing_query)
+            existing_msg = existing_res.scalar_one_or_none()
+            if existing_msg:
+                logger.info(
+                    f"Idempotent message hit for external_id: {payload.external_message_id}"
+                )
+                return existing_msg
+
+        # 2. Deterministic sequence number calculation
+        seq_stmt = select(func.coalesce(func.max(Message.sequence_number), 0)).where(
+            Message.conversation_id == conversation_id
+        )
+        current_max_seq = (await session.execute(seq_stmt)).scalar_one()
+        next_seq = current_max_seq + 1
+
+        message = Message(
+            organization_id=organization_id,
+            conversation_id=conversation_id,
+            direction=payload.direction,
+            author_type=payload.author_type,
+            author_id=author_id,
+            sender_display_name=sender_display_name,
+            body_text=payload.body_text.strip(),
+            body_rich=payload.body_rich,
+            content_type=payload.content_type,
+            external_message_id=payload.external_message_id.strip()
+            if payload.external_message_id
+            else None,
+            sequence_number=next_seq,
+            delivery_status="stored"
+            if payload.direction == MessageDirection.OUTBOUND
+            else "received",
+        )
+        session.add(message)
+
+        # 3. Update parent conversation last_message_at
+        conv.last_message_at = datetime.now(UTC)
+
+        # 4. Update ticket first_response_at if this is the first outbound agent response
+        if (
+            payload.direction == MessageDirection.OUTBOUND
+            and payload.author_type == AuthorType.AGENT
+        ):
+            tick_stmt = select(Ticket).where(
+                Ticket.organization_id == organization_id,
+                Ticket.id == conv.ticket_id,
+            )
+            tick_res = await session.execute(tick_stmt)
+            ticket = tick_res.scalar_one_or_none()
+            if ticket and ticket.first_response_at is None:
+                ticket.first_response_at = datetime.now(UTC)
+
+        if auto_commit:
+            await session.commit()
+            await session.refresh(message)
+        else:
+            await session.flush()
+
+        logger.info(
+            f"Created message {message.id} in conversation {conversation_id} (seq {next_seq})"
+        )
+        return message
+
+    @staticmethod
     async def create_message(
         session: AsyncSession,
         context: OrganizationContext,
@@ -151,67 +264,26 @@ class ConversationService:
             raise ForbiddenException("Permission 'tickets:write' required to post messages.")
 
         org_id = context.organization.id
-        conv = await context.tenant_query.get_conversation(conversation_id)
-        if not conv:
-            raise ResourceNotFoundException("Conversation", conversation_id)
 
         # 1. Author role validation
         if payload.author_type in (AuthorType.SYSTEM, AuthorType.AI):
             if context.role not in (MembershipRole.OWNER, MembershipRole.ADMIN):
-                raise ForbiddenException("Cannot submit message as system or AI without administrative authority.")
+                raise ForbiddenException(
+                    "Cannot submit message as system or AI without administrative authority."
+                )
 
-        # 2. Idempotency check on external_message_id
-        if payload.external_message_id and payload.external_message_id.strip():
-            existing_query = select(Message).where(
-                Message.organization_id == org_id,
-                Message.external_message_id == payload.external_message_id.strip(),
-            )
-            existing_res = await session.execute(existing_query)
-            existing_msg = existing_res.scalar_one_or_none()
-            if existing_msg:
-                logger.info(f"Idempotent message hit for external_id: {payload.external_message_id}")
-                return existing_msg
-
-        # 3. Deterministic sequence number calculation
-        seq_stmt = select(func.coalesce(func.max(Message.sequence_number), 0)).where(
-            Message.conversation_id == conversation_id
-        )
-        current_max_seq = (await session.execute(seq_stmt)).scalar_one()
-        next_seq = current_max_seq + 1
-
-        # Determine author ID and sender name
         author_id = str(context.user.id) if payload.author_type == AuthorType.AGENT else None
         sender_name = context.user.display_name if payload.author_type == AuthorType.AGENT else None
 
-        message = Message(
+        return await ConversationService.create_message_internal(
+            session=session,
             organization_id=org_id,
             conversation_id=conversation_id,
-            direction=payload.direction,
-            author_type=payload.author_type,
+            payload=payload,
             author_id=author_id,
             sender_display_name=sender_name,
-            body_text=payload.body_text.strip(),
-            body_rich=payload.body_rich,
-            content_type=payload.content_type,
-            external_message_id=payload.external_message_id.strip() if payload.external_message_id else None,
-            sequence_number=next_seq,
-            delivery_status="stored" if payload.direction == MessageDirection.OUTBOUND else "received",
+            auto_commit=True,
         )
-        session.add(message)
-
-        # 4. Update parent conversation last_message_at
-        conv.last_message_at = datetime.now(UTC)
-
-        # 5. Update ticket first_response_at if this is the first outbound agent response
-        if payload.direction == MessageDirection.OUTBOUND and payload.author_type == AuthorType.AGENT:
-            ticket = await context.tenant_query.get_ticket(conv.ticket_id)
-            if ticket and ticket.first_response_at is None:
-                ticket.first_response_at = datetime.now(UTC)
-
-        await session.commit()
-        await session.refresh(message)
-        logger.info(f"Created message {message.id} in conversation {conversation_id} (seq {next_seq})")
-        return message
 
     @staticmethod
     async def get_message(

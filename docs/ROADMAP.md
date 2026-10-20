@@ -87,23 +87,30 @@ graph TD
 
 ---
 
-### Phase 04: Company Knowledge Engine, Chunking & Qdrant Retrieval
+### Phase 04: Reliable Event Ingestion, Webhooks, Idempotency, Background Processing & Connector Foundation
+- **Status**: **COMPLETE / VERIFIED**
+- **Dependencies**: Phase 00, Phase 01, Phase 02, Phase 03
+- **Scope & Deliverables**:
+  - Organization-scoped external source configuration (`EventSource`) with secure secret generation, cryptographic hash indexing, preview masking, and symmetric AES-CTR encryption at rest.
+  - Inbound webhook reception boundary (`POST /api/v1/webhooks/sources/{id}` and `/api/v1/webhooks/generic`) verifying constant-time HMAC-SHA256 signatures, timestamp replay window (300s), payload size limits (1MB), and content-type validation.
+  - Durable PostgreSQL-backed event receipts (`IngestionReceipt`) tracking lifecycle states (`queued`, `processing`, `processed`, `retry_wait`, `dead_letter`, `quarantined`) with engine-level deduplication on `(organization_id, source_provider, external_event_id)` and payload digest comparison (202 Accepted on new events, 200 OK on duplicate delivery, 409 Conflict on payload mismatch).
+  - Background asynchronous worker (`IngestionWorker`) executing transactional job claiming with PostgreSQL `FOR UPDATE SKIP LOCKED`, crash recovery via expired lease reclamation, exponential backoff with jitter on retries, and dead-letter transitions.
+  - Canonical event normalization pipeline (`CanonicalEvent`, `EventNormalizer`, `StandardWebhookAdapter`) validating incoming payloads with typed Pydantic models.
+  - Idempotent domain mapping (`IngestionProcessor`) mapping normalized events to Phase 03 `Customer`, `Ticket`, `Conversation`, and `Message` models.
+  - Operational APIs for authorized operators (`ingestion:read`, `ingestion:manage`) to query receipts with filters, retrieve sanitized details, and replay dead-lettered events without creating duplicate domain entities.
+  - Worker health diagnostics endpoint (`GET /api/v1/ingestion/worker/health`).
+  - Alembic migration `0005_event_ingestion_subsystem` applied and verified.
+  - Automated test suite (122 tests passed, 0 failures, 1 optional container probe skipped).
+
+---
+
+### Phase 05: Company Knowledge Engine, Chunking & Qdrant Retrieval
 - **Status**: Scheduled
-- **Dependencies**: Phase 02
+- **Dependencies**: Phase 02, Phase 04
 - **Scope**:
   - Multi-format document ingestion (Markdown, PDF, HTML).
   - Chunking strategies and vector embedding generation.
   - Qdrant multi-tenant collection indexing and hybrid similarity retrieval.
-
----
-
-### Phase 05: Claim-Level Response Verification & Hallucination Guard
-- **Status**: Scheduled
-- **Dependencies**: Phase 04
-- **Scope**:
-  - Decomposition of candidate AI responses into atomic factual claims.
-  - Evidence retrieval and source-grounding verification against company knowledge.
-  - Contradiction detection and automated blocking of ungrounded responses.
 
 ---
 
