@@ -104,13 +104,30 @@ graph TD
 
 ---
 
-### Phase 05: Company Knowledge Engine, Chunking & Qdrant Retrieval
+### Phase 05: Enterprise Knowledge Base, Document Processing, Versioning & Retrieval Foundation
+- **Status**: **COMPLETE / VERIFIED**
+- **Dependencies**: Phase 00, Phase 01, Phase 02, Phase 03, Phase 04
+- **Scope & Deliverables**:
+  - Canonical knowledge domain models: `KnowledgeBase`, `Document`, `DocumentVersion`, `DocumentChunk`.
+  - Object storage subsystem (`StorageBackend`, `LocalStorageBackend`) with path traversal guards, opaque non-guessable storage keys, atomic streaming writes, and checksum verification.
+  - Strict file validation policy (`validate_document_file`): format allowlist (PDF, DOCX, TXT, Markdown), magic byte inspection (`%PDF-`, PKZIP OpenXML), zip bomb defense (100MB limit, 50x expansion ratio), and binary null byte rejection.
+  - Real text extractors: `PdfExtractor` (`pypdf` with scanned/image-only PDF detection and `OCR_UNAVAILABLE` reporting), `DocxExtractor` (`python-docx` with heading styles and tabular data preservation), and `TextExtractor` (UTF-8/UTF-8-SIG line ending normalization).
+  - Deterministic text normalization (`TextNormalizer`) preserving URLs, code blocks, and section headings.
+  - Reproducible hierarchical structural chunking (`HierarchicalStructuralChunker`): heading hierarchy tracking, exact start/end character offsets, word/char counts, chunk SHA-256 checksums, and zero empty chunks.
+  - Background document processing worker (`DocumentWorker`) with PostgreSQL `FOR UPDATE SKIP LOCKED` claiming, expired lease reclamation (300s timeout), exponential retry backoff, and prior version preservation (failed new version processing preserves previous usable version).
+  - PostgreSQL 16 migration `0006_knowledge_base_subsystem` applied to both `supportgpt_db` and `supportgpt_test_db` with live Row-Level Security (RLS) policies and composite tenant foreign key constraints.
+  - Organization-scoped RESTful API endpoints for knowledge base CRUD, document uploads, revisions, reprocessing, soft delete, and chunk retrieval with RBAC enforcement.
+  - Automated test suite (160 tests passed, 0 failures, 1 optional container probe skipped).
+
+---
+
+### Phase 06: Vector Indexing, Qdrant Integration & Semantic Retrieval
 - **Status**: Scheduled
-- **Dependencies**: Phase 02, Phase 04
+- **Dependencies**: Phase 02, Phase 05
 - **Scope**:
-  - Multi-format document ingestion (Markdown, PDF, HTML).
-  - Chunking strategies and vector embedding generation.
-  - Qdrant multi-tenant collection indexing and hybrid similarity retrieval.
+  - Vector embedding generation and embedding model provider integration.
+  - Qdrant multi-tenant collection indexing and payload filtering.
+  - Hybrid similarity and keyword retrieval with citation provenance.
 
 ---
 

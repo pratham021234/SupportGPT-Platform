@@ -115,22 +115,58 @@ The configuration engine enforces strict runtime validation:
 
 ---
 
-## 6. Security Boundary & Planned Milestones
+## 6. Knowledge Subsystem, Storage & Document Processing Security (Phase 05)
 
-| Security Milestone | Status | Description |
-|---|---|---|
-| **Multi-Tenant Row-Level Security (RLS)** | **Active (Phase 02/03/04)** | PostgreSQL RLS policies enforcing tenant isolation via transaction-scoped `set_config('app.current_organization_id', ..., true)`. |
-| **Authentication & RBAC** | **Active (Phase 02)** | Argon2id password hashing, server-side revocable sessions, organization memberships, and role-based access control. |
-| **Ticket & Conversation Authorization** | **Active (Phase 03)** | Direct-ID attack resistance, OCC conflict prevention, author impersonation blocks, and atomic event audit trails. |
-| **Inbound Webhook Verification & Secrets** | **Active (Phase 04)** | Cryptographic signature validation (HMAC-SHA256), replay protection, AES-CTR secret encryption, and idempotent event processing. |
-| **Claim-Level Hallucination Guard** | Phase 05 | Automated decomposition of model completions into atomic claims, checking evidence grounding before delivery. |
-| **Policy Approval Gates** | Phase 06 | Fine-grained intervention gates requiring dual authorization for sensitive actions. |
-| **PII Redaction & Sanitization** | Phase 07 | Automated masking of customer Personally Identifiable Information in forensic trace logs. |
+### A. Path Traversal Defense & Opaque Storage Keys
+- Object storage keys never incorporate client-supplied filenames or arbitrary path segments. Keys follow the opaque template: `org_{org_id}/docs/{doc_id}/v{version_number}_{uuid}.bin`.
+- `LocalStorageBackend` validates that storage keys contain no leading slashes, backslashes, drive letters, or directory traversal sequences (`..`).
+- File paths are resolved and strictly verified against the storage root via `Path(resolved).is_relative_to(base_dir)`. Attempted path traversals raise `PathTraversalException` with HTTP 400 (`SECURITY_VIOLATION`).
+
+### B. Format Signature Validation & Format Allowlist
+- File validation rejects client-supplied extensions and MIME headers as untrusted. Files are validated using genuine binary signatures:
+  - **PDF**: Verified against `%PDF-` signature.
+  - **DOCX**: Verified as valid PKZIP containing `word/document.xml`.
+  - **TXT / Markdown**: Decoded strictly as UTF-8/UTF-8-SIG without binary null bytes (`\x00`).
+- Unknown extensions, executable binaries, archives, and shell scripts are rejected immediately with HTTP 415 (`UNSUPPORTED_MEDIA_TYPE`).
+
+### C. Resource Bounds & Decompression Safety (Zip Bomb Defense)
+- Enforces an upload ceiling of 20MB (`MAX_DOCUMENT_UPLOAD_BYTES = 20_971_520`).
+- Archive-based documents (DOCX) are checked during decompression:
+  - Total uncompressed size must not exceed 100MB (`MAX_UNCOMPRESSED_ZIP_BYTES = 104_857_600`).
+  - Expansion ratio must not exceed 50x (`MAX_ZIP_COMPRESSION_RATIO = 50.0`).
+- Violations raise `PayloadSizeLimitException` with HTTP 413 (`PAYLOAD_TOO_LARGE`).
+
+### D. Untrusted Content Execution & Network Isolation
+- Document parsers (`pypdf`, `python-docx`, text extractors) run without executing embedded macros, scripts, or active code.
+- Parsers are prohibited from fetching remote URLs or following external references discovered in document content.
+- Document content is never logged in full to application or system logs.
+
+### E. Multi-Tenant Isolation & RLS Enforcement
+- RLS policies are enabled and forced on `knowledge_bases`, `documents`, `document_versions`, and `document_chunks`.
+- Composite foreign key constraints (`[knowledge_base_id, organization_id]`, `[document_id, organization_id]`, `[version_id, organization_id]`) guarantee relational integrity across tenant boundaries.
+- Cross-tenant API lookups return HTTP 404 (preventing existence disclosure).
 
 ---
 
-## 7. Vulnerability Reporting
+## 7. Security Boundary & Planned Milestones
+
+| Security Milestone | Status | Description |
+|---|---|---|
+| **Multi-Tenant Row-Level Security (RLS)** | **Active (Phase 02–05)** | PostgreSQL RLS policies enforcing tenant isolation across tickets, events, sources, knowledge bases, documents, and chunks. |
+| **Authentication & RBAC** | **Active (Phase 02)** | Argon2id password hashing, server-side revocable sessions, organization memberships, and role-based access control. |
+| **Ticket & Conversation Authorization** | **Active (Phase 03)** | Direct-ID attack resistance, OCC conflict prevention, author impersonation blocks, and atomic event audit trails. |
+| **Inbound Webhook Verification & Secrets** | **Active (Phase 04)** | Cryptographic signature validation (HMAC-SHA256), replay protection, AES-CTR secret encryption, and idempotent event processing. |
+| **Safe Storage & Document Processing** | **Active (Phase 05)** | Path traversal guards, magic byte verification, zip bomb limits, and deterministic chunk provenance. |
+| **Vector Store Tenant Isolation** | Phase 06 | Collection-level and payload-filtered tenant isolation in Qdrant vector database. |
+| **Claim-Level Hallucination Guard** | Phase 07 | Automated decomposition of model completions into atomic claims, checking evidence grounding before delivery. |
+| **Policy Approval Gates** | Phase 08 | Fine-grained intervention gates requiring dual authorization for sensitive actions. |
+| **PII Redaction & Sanitization** | Phase 09 | Automated masking of customer Personally Identifiable Information in forensic trace logs. |
+
+---
+
+## 8. Vulnerability Reporting
 For vulnerability disclosures and security findings, contact:  
 `security@supportgpt.ai`
+
 
 

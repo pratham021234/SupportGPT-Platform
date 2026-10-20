@@ -27,6 +27,11 @@ class Permission(StrEnum):
     INGESTION_READ = "ingestion:read"
     INGESTION_MANAGE = "ingestion:manage"
 
+    # Knowledge Base & Document Management
+    KNOWLEDGE_READ = "knowledge:read"
+    KNOWLEDGE_WRITE = "knowledge:write"
+    KNOWLEDGE_MANAGE = "knowledge:manage"
+
 
 # Explicit Role-Permission Matrix (Least Privilege)
 ROLE_PERMISSIONS: dict[MembershipRole, set[Permission]] = {
@@ -44,6 +49,9 @@ ROLE_PERMISSIONS: dict[MembershipRole, set[Permission]] = {
         Permission.SOURCES_MANAGE,
         Permission.INGESTION_READ,
         Permission.INGESTION_MANAGE,
+        Permission.KNOWLEDGE_READ,
+        Permission.KNOWLEDGE_WRITE,
+        Permission.KNOWLEDGE_MANAGE,
     },
     MembershipRole.ADMIN: {
         Permission.ORG_READ,
@@ -59,6 +67,9 @@ ROLE_PERMISSIONS: dict[MembershipRole, set[Permission]] = {
         Permission.SOURCES_MANAGE,
         Permission.INGESTION_READ,
         Permission.INGESTION_MANAGE,
+        Permission.KNOWLEDGE_READ,
+        Permission.KNOWLEDGE_WRITE,
+        Permission.KNOWLEDGE_MANAGE,
     },
     MembershipRole.AGENT: {
         Permission.ORG_READ,
@@ -69,11 +80,14 @@ ROLE_PERMISSIONS: dict[MembershipRole, set[Permission]] = {
         Permission.CUSTOMERS_WRITE,
         Permission.SOURCES_READ,
         Permission.INGESTION_READ,
+        Permission.KNOWLEDGE_READ,
+        Permission.KNOWLEDGE_WRITE,
     },
     MembershipRole.VIEWER: {
         Permission.ORG_READ,
         Permission.TICKETS_READ,
         Permission.CUSTOMERS_READ,
+        Permission.KNOWLEDGE_READ,
     },
 }
 

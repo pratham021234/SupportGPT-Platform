@@ -40,9 +40,34 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         worker_task = asyncio.create_task(worker.start())
         logger.info(f"IngestionWorker [{worker.worker_id}] background task started.")
 
+    doc_worker_task = None
+    doc_worker_stop = None
+    if settings.ENABLE_DOCUMENT_WORKER and settings.ENVIRONMENT != "test":
+        from app.db.session import async_session_factory
+        from app.services.document_worker import DocumentWorker
+
+        doc_worker = DocumentWorker(session_factory=async_session_factory)
+        doc_worker_stop = asyncio.Event()
+        doc_worker_task = asyncio.create_task(
+            doc_worker.run_worker_loop(
+                doc_worker_stop,
+                poll_interval=settings.DOCUMENT_PROCESSING_POLL_INTERVAL_SECONDS,
+            )
+        )
+        logger.info(f"DocumentWorker [{doc_worker.worker_id}] background task started.")
+
     yield
 
     # Teardown sequence
+    if doc_worker_stop and doc_worker_task:
+        logger.info("Stopping DocumentWorker...")
+        doc_worker_stop.set()
+        try:
+            await asyncio.wait_for(doc_worker_task, timeout=5.0)
+        except (TimeoutError, asyncio.CancelledError):
+            pass
+        logger.info("DocumentWorker stopped.")
+
     if worker and worker_task:
         logger.info(f"Stopping IngestionWorker [{worker.worker_id}]...")
         worker.stop()

@@ -62,6 +62,8 @@ yarn-error.log*
 postgres_data/
 redis_data/
 qdrant_data/
+storage_data/
+backend/storage_data/
 *.db
 *.sqlite3
 

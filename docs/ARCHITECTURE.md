@@ -303,10 +303,90 @@ stateDiagram-v2
 
 ---
 
-## 9. Known Limitations & Deferred Work (Out of Scope for Phase 04)
-1. **AI Classification & Response Drafting**: LLM prompt pipelines, retrieval-augmented generation (RAG), and response verification are strictly deferred to Phase 05+.
-2. **Outbound Customer Dispatch**: Automatic webhook replies or email dispatch are deferred.
-3. **Email IMAP/SMTP Ingestion**: Specialized email polling and MIME attachments are deferred.
-4. **Billing & Subscriptions**: Stripe/Paddle billing and seat quotas are deferred.
+## 9. Enterprise Knowledge Base, Document Processing & Versioning (Phase 05)
+
+### 9.1 Knowledge Subsystem Mission & Scope
+Phase 05 introduces the enterprise knowledge management and document-processing subsystem. This subsystem forms the trusted evidence foundation for future retrieval-augmented generation (RAG), citation provenance, AI-assisted customer support, and claim-level verification.
+
+### 9.2 Domain Architecture & Entity Hierarchy
+- **`KnowledgeBase`**: Logical, organization-owned collection of company knowledge (e.g., "Engineering Runbooks", "Customer Support Policies", "Product Documentation"). Configurable via JSONB.
+- **`Document`**: Canonical source document entity tracking display title, source type (`file_upload`), verified MIME type, original sanitized filename, processing state, lifecycle state (`active`, `archived`, `deleted`), and current usable version pointer (`current_version_id`).
+- **`DocumentVersion`**: Immutable revision record tracking monotonic `version_number`, opaque `storage_key`, binary SHA-256 checksum, byte size, processing state, extractor and chunker metadata, word and character counts, and worker lease status.
+- **`DocumentChunk`**: Persisted structural text partition tracking sequential ordering (`sequence_number`), normalized content, word and character counts, exact start/end character offsets (`start_char_idx`, `end_char_idx`), Markdown section breadcrumbs (`heading_hierarchy`), content SHA-256 digest, and `pipeline_version`.
+
+```mermaid
+erDiagram
+    ORGANIZATION ||--o{ KNOWLEDGE_BASE : "owns"
+    ORGANIZATION ||--o{ DOCUMENT : "scopes"
+    ORGANIZATION ||--o{ DOCUMENT_VERSION : "scopes"
+    ORGANIZATION ||--o{ DOCUMENT_CHUNK : "scopes"
+
+    KNOWLEDGE_BASE ||--o{ DOCUMENT : "contains"
+    DOCUMENT ||--o{ DOCUMENT_VERSION : "has immutable revisions"
+    DOCUMENT_VERSION ||--o{ DOCUMENT_CHUNK : "derived into"
+```
+
+### 9.3 Safe Storage Subsystem
+- **Abstraction Boundary**: Decoupled via `StorageBackend` (`store`, `read`, `read_bytes`, `delete`, `exists`, `get_metadata`).
+- **Local Adapter**: `LocalStorageBackend` storing files under `settings.LOCAL_STORAGE_DIR`.
+- **Path Traversal Defense**: Rejects keys with absolute paths, drive letters, leading slashes, or `..` segments. Validates that `Path(target).resolve().is_relative_to(base_dir)`.
+- **Atomic Streaming Writes**: Streams uploaded bytes into a temporary `.tmp_{uuid}` file while checking size limits and computing running SHA-256 digests simultaneously. Atomically commits via `os.replace`.
+- **Opaque Storage Keys**: Storage paths never use user-supplied filenames; keys follow `org_{org_id}/docs/{doc_id}/v{version_number}_{uuid}.bin`.
+
+### 9.4 File Validation & Security Policy
+- **Signature Allowlist**:
+  - `application/pdf`: Validated against `%PDF-` signature.
+  - `application/vnd.openxmlformats-officedocument.wordprocessingml.document`: Validated as PKZIP archive containing `word/document.xml`.
+  - `text/plain` & `text/markdown`: Decodable as UTF-8/UTF-8-SIG without binary null bytes (`\x00`).
+- **Zip Bomb Defense**: Rejects DOCX files exceeding 100MB uncompressed or expansion ratios exceeding 50x.
+- **Filename Sanitization**: Cleans path traversal characters, control codes, and unsafe punctuation.
+
+### 9.5 Real Text Extraction & Scanned PDF Detection
+- **PDF**: Real page-by-page extraction using `pypdf.PdfReader`. Evaluates total extracted text; if the PDF contains zero extracted text characters while possessing pages or image elements, it detects a scanned or image-only document and reports that OCR is unavailable (`OCR_UNAVAILABLE`).
+- **DOCX**: Structural extraction using `python-docx` converting Word heading styles (`Heading 1`, `Heading 2`) to Markdown headings (`#`, `##`), and converting tables into pipe-delimited structural representations.
+- **TXT & Markdown**: Normalizes line endings (`\r\n` -> `\n`, `\r` -> `\n`) while preserving technical identifiers, code blocks, and URLs.
+
+### 9.6 Deterministic Normalization & Hierarchical Structural Chunking
+- **`TextNormalizer` (`v1.0.0`)**: Strips non-printable ASCII control characters (preserving newlines and tabs), trims line trailing whitespace, and collapses 3+ newlines into 2 (clean paragraph breaks).
+- **`HierarchicalStructuralChunker` (`v1.0.0`)**:
+  - Tracks active heading stacks (`["Section 1", "Subsection 1.1"]`).
+  - Slices text by paragraph boundaries, sentence boundaries, and word boundaries.
+  - Enforces configurable `chunk_size` (1000 chars) and `chunk_overlap` (150 chars snapped to word boundaries).
+  - Guarantees zero empty chunks, deterministic reproducibility, and exact source offsets.
+
+### 9.7 Document Processing Lifecycle & Background Worker
+
+```mermaid
+stateDiagram-v2
+    [*] --> uploaded: API Upload Accepted
+    uploaded --> stored: Binary Committed to Storage
+    stored --> queued: Version Record Inserted
+    queued --> extracting: Worker Claims via FOR UPDATE SKIP LOCKED
+    extracting --> normalizing: Text Extracted via Format Extractor
+    normalizing --> chunking: Text Normalized Deterministically
+    chunking --> chunked: Chunks Atomically Persisted in DB
+    chunked --> ready_for_indexing: Ready for Vector Embedding (Phase 06)
+    
+    extracting --> failed: Extraction Error / Scanned PDF (OCR Unavailable)
+    extracting --> retry_wait: Transient I/O or DB Error (Attempt < Max)
+    retry_wait --> extracting: Exponential Backoff Expired
+    extracting --> failed: Max Attempts (3) Exceeded
+    extracting --> extracting: Lease Timeout (> 300s) Reclaimed after Worker Crash
+```
+
+### 9.8 Prior Version Preservation
+When a new version (v2) is uploaded for an existing document:
+- The parent `Document.current_version_id` continues pointing to v1.
+- If v2 processing succeeds, the worker atomically updates `Document.current_version_id = v2.id` and `current_version_number = 2`.
+- If v2 processing fails, v2 is marked `failed`, but parent `Document` continues to point to v1 without interruption or degradation.
+
+---
+
+## 10. Known Limitations & Deferred Work
+1. **Vector Indexing & Embedding Generation**: Generating vector embeddings with external providers and indexing chunks into Qdrant is strictly deferred to Phase 06.
+2. **Optical Character Recognition (OCR)**: Scanned PDFs and image-only documents are flagged as `OCR_UNAVAILABLE`; OCR engine integration (e.g. Tesseract) is deferred.
+3. **Multi-Node Cloud Object Storage**: S3/GCS-compatible object storage adapters are deferred; local filesystem storage is active for single-node deployments.
+4. **AI Generation & Human Approvals**: LLM response generation, claim verification, and human approval workflows are deferred to future phases.
+
 
 

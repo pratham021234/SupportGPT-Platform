@@ -134,6 +134,48 @@ class Settings(BaseSettings):
         description="Optional master key for encrypting provider webhook secrets at rest",
     )
 
+    # Storage & Document Processing Subsystem Configuration
+    STORAGE_BACKEND: Literal["local", "s3"] = Field(
+        default="local",
+        description="Active binary object storage adapter backend",
+    )
+    LOCAL_STORAGE_DIR: str = Field(
+        default="storage_data",
+        description="Filesystem directory root for local object storage backend",
+    )
+    MAX_DOCUMENT_UPLOAD_BYTES: int = Field(
+        default=20_971_520,
+        description="Max allowed bytes for document uploads (default: 20MB)",
+    )
+    DOCUMENT_PROCESSING_BATCH_SIZE: int = Field(
+        default=10,
+        description="Max document versions claimed per background worker cycle",
+    )
+    DOCUMENT_PROCESSING_LEASE_TIMEOUT_SECONDS: int = Field(
+        default=300,
+        description="Document processing worker lease timeout in seconds before reclamation",
+    )
+    DOCUMENT_PROCESSING_MAX_ATTEMPTS: int = Field(
+        default=3,
+        description="Max worker processing retry attempts before marking document version failed",
+    )
+    DEFAULT_CHUNK_SIZE_CHARS: int = Field(
+        default=1000,
+        description="Target maximum character count per text chunk",
+    )
+    DEFAULT_CHUNK_OVERLAP_CHARS: int = Field(
+        default=150,
+        description="Target character overlap between sequential chunks",
+    )
+    ENABLE_DOCUMENT_WORKER: bool = Field(
+        default=True,
+        description="Enable automatic document processing background worker on startup",
+    )
+    DOCUMENT_PROCESSING_POLL_INTERVAL_SECONDS: float = Field(
+        default=2.0,
+        description="Document background worker poll interval in seconds",
+    )
+
     # Vector Storage
     QDRANT_HOST: str = Field(default="localhost", description="Qdrant vector engine host")
     QDRANT_PORT: int = Field(default=6333, description="Qdrant HTTP port")

@@ -9,8 +9,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.attachment import Attachment
 from app.models.conversation import Conversation
 from app.models.customer import Customer
+from app.models.document import Document
+from app.models.document_chunk import DocumentChunk
+from app.models.document_version import DocumentVersion
 from app.models.event_source import EventSource
 from app.models.ingestion_receipt import IngestionReceipt
+from app.models.knowledge_base import KnowledgeBase
 from app.models.message import Message
 from app.models.ticket import Ticket
 from app.models.ticket_event import TicketEvent
@@ -159,3 +163,99 @@ class TenantScopedQuery:
         )
         result = await self.session.execute(query)
         return result.scalars().all()
+
+    async def get_knowledge_base(self, kb_id: uuid.UUID) -> KnowledgeBase | None:
+        """Retrieve a knowledge base strictly scoped to the active organization."""
+        query = select(KnowledgeBase).where(
+            KnowledgeBase.id == kb_id,
+            KnowledgeBase.organization_id == self.organization_id,
+        )
+        result = await self.session.execute(query)
+        return result.scalar_one_or_none()
+
+    async def list_knowledge_bases(self, limit: int = 50, offset: int = 0) -> Sequence[KnowledgeBase]:
+        """List knowledge bases strictly within the active organization."""
+        query = (
+            select(KnowledgeBase)
+            .where(KnowledgeBase.organization_id == self.organization_id)
+            .order_by(KnowledgeBase.created_at.desc())
+            .limit(limit)
+            .offset(offset)
+        )
+        result = await self.session.execute(query)
+        return result.scalars().all()
+
+    async def get_document(self, document_id: uuid.UUID) -> Document | None:
+        """Retrieve a document strictly scoped to the active organization."""
+        query = select(Document).where(
+            Document.id == document_id,
+            Document.organization_id == self.organization_id,
+        )
+        result = await self.session.execute(query)
+        return result.scalar_one_or_none()
+
+    async def list_documents(
+        self,
+        kb_id: uuid.UUID | None = None,
+        limit: int = 50,
+        offset: int = 0,
+        include_archived: bool = False,
+    ) -> Sequence[Document]:
+        """List active documents strictly within the active organization."""
+        from app.models.enums import DocumentLifecycleStatus
+
+        query = select(Document).where(
+            Document.organization_id == self.organization_id,
+            Document.lifecycle_status != DocumentLifecycleStatus.DELETED,
+        )
+        if kb_id:
+            query = query.where(Document.knowledge_base_id == kb_id)
+        if not include_archived:
+            query = query.where(Document.lifecycle_status == DocumentLifecycleStatus.ACTIVE)
+
+        query = query.order_by(Document.created_at.desc()).limit(limit).offset(offset)
+        result = await self.session.execute(query)
+        return result.scalars().all()
+
+    async def get_document_version(
+        self, document_id: uuid.UUID, version_id: uuid.UUID
+    ) -> DocumentVersion | None:
+        """Retrieve a specific document version strictly scoped to the active organization."""
+        query = select(DocumentVersion).where(
+            DocumentVersion.id == version_id,
+            DocumentVersion.document_id == document_id,
+            DocumentVersion.organization_id == self.organization_id,
+        )
+        result = await self.session.execute(query)
+        return result.scalar_one_or_none()
+
+    async def list_document_versions(self, document_id: uuid.UUID) -> Sequence[DocumentVersion]:
+        """List all versions of a document strictly within the active organization."""
+        query = (
+            select(DocumentVersion)
+            .where(
+                DocumentVersion.document_id == document_id,
+                DocumentVersion.organization_id == self.organization_id,
+            )
+            .order_by(DocumentVersion.version_number.desc())
+        )
+        result = await self.session.execute(query)
+        return result.scalars().all()
+
+    async def list_document_chunks(
+        self, version_id: uuid.UUID, limit: int = 100, offset: int = 0
+    ) -> Sequence[DocumentChunk]:
+        """List chunks for a specific document version strictly scoped to the active organization."""
+        query = (
+            select(DocumentChunk)
+            .where(
+                DocumentChunk.version_id == version_id,
+                DocumentChunk.organization_id == self.organization_id,
+            )
+            .order_by(DocumentChunk.sequence_number.asc())
+            .limit(limit)
+            .offset(offset)
+        )
+        result = await self.session.execute(query)
+        return result.scalars().all()
+

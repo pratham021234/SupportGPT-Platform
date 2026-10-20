@@ -6,7 +6,7 @@ SupportGPT AI is a commercial-grade, multi-tenant B2B SaaS platform engineered f
 
 ---
 
-## 1. Engineering Status: Phase 00, Phase 01, Phase 02, Phase 03 & Phase 04 Completed
+## 1. Engineering Status: Phase 00, Phase 01, Phase 02, Phase 03, Phase 04 & Phase 05 Completed
 
 - **Phase 00 Foundation & Standards**:
   - **Architecture**: Modular Monolith with clean domain boundaries (`api/`, `core/`, `db/`, `models/`, `schemas/`, `ai/`).
@@ -44,6 +44,15 @@ SupportGPT AI is a commercial-grade, multi-tenant B2B SaaS platform engineered f
   - **Canonical Event Normalization & Domain Mapping**: Typed `CanonicalEvent` normalization and idempotent application to `Customer`, `Ticket`, `Conversation`, and `Message` models.
   - **Operational Observability & Replay**: Restricted API endpoints for receipt inspection, sanitized error summaries, worker health diagnostics, and idempotent dead-letter replay.
   - **Alembic Migration**: `0005_event_ingestion_subsystem` applied to both `supportgpt_db` and `supportgpt_test_db`.
+- **Phase 05 Enterprise Knowledge Base, Document Processing, Versioning & Retrieval Foundation**:
+  - **Canonical Knowledge Domain Models**: `KnowledgeBase`, `Document`, `DocumentVersion`, `DocumentChunk` with composite tenant foreign key constraints.
+  - **Object Storage Subsystem**: Decoupled `StorageBackend` abstraction with `LocalStorageBackend` providing path traversal defense, opaque storage keys (`org_{org_id}/docs/{doc_id}/v{version_number}_{uuid}.bin`), atomic streaming writes, and checksum verification.
+  - **Secure File Validation**: Explicit format allowlist (PDF, DOCX, TXT, Markdown), binary magic byte checking (`%PDF-`, PKZIP OpenXML), zip bomb defense (100MB uncompressed limit, 50x expansion ratio), and binary null byte rejection.
+  - **Authentic Text Extractors**: `pypdf` extraction with automatic scanned/image-only PDF detection reporting `OCR_UNAVAILABLE`; `python-docx` structural extraction preserving headings and tables; and encoding-safe text/markdown extraction.
+  - **Deterministic Normalization & Structural Chunking**: `TextNormalizer` and `HierarchicalStructuralChunker` generating reproducible chunks with heading hierarchy breadcrumbs, character offsets, SHA-256 chunk digests, and zero empty chunks.
+  - **Prior Version Preservation & Worker Concurrency**: `DocumentWorker` executing PostgreSQL `FOR UPDATE SKIP LOCKED` claiming, crash lease recovery (300s timeout), exponential retry backoff, and version preservation (failed new versions keep prior usable versions active).
+  - **Alembic Migration**: `0006_knowledge_base_subsystem` applied to both `supportgpt_db` and `supportgpt_test_db` with active PostgreSQL Row-Level Security (RLS) policies.
+  - **RESTful Endpoints**: Full organization-scoped APIs for knowledge base collections, document uploads, revisions, reprocessing, soft delete, and chunk provenance with RBAC enforcement.
 
 ---
 

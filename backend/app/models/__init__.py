@@ -4,14 +4,22 @@ from app.models.attachment import Attachment
 from app.models.conversation import Conversation
 from app.models.customer import Customer
 from app.models.customer_identity import CustomerIdentity, normalize_identity_value
+from app.models.document import Document
+from app.models.document_chunk import DocumentChunk
+from app.models.document_version import DocumentVersion
 from app.models.enums import (
     AttachmentScanStatus,
     AuthorType,
     ConversationStatus,
     CustomerStatus,
+    DocumentLifecycleStatus,
+    DocumentMediaType,
+    DocumentProcessingStatus,
+    DocumentSourceType,
     IdentityType,
     IdentityVerificationStatus,
     IngestionStatus,
+    KnowledgeBaseStatus,
     MembershipRole,
     MembershipStatus,
     MessageDirection,
@@ -28,6 +36,7 @@ from app.models.enums import (
 from app.models.event_source import EventSource
 from app.models.foundation import SystemEventLog
 from app.models.ingestion_receipt import IngestionReceipt
+from app.models.knowledge_base import KnowledgeBase
 from app.models.membership import OrganizationMembership
 from app.models.message import Message
 from app.models.organization import (
@@ -61,6 +70,11 @@ __all__ = [
     "TicketEvent",
     "IngestionReceipt",
     "EventSource",
+    # Knowledge Base & Documents
+    "KnowledgeBase",
+    "Document",
+    "DocumentVersion",
+    "DocumentChunk",
     # Identity, Accounts & Memberships
     "User",
     "OrganizationMembership",
@@ -84,5 +98,10 @@ __all__ = [
     "IngestionStatus",
     "SourceStatus",
     "SourceProvider",
+    "KnowledgeBaseStatus",
+    "DocumentSourceType",
+    "DocumentMediaType",
+    "DocumentProcessingStatus",
+    "DocumentLifecycleStatus",
     "can_transition_ticket_status",
 ]

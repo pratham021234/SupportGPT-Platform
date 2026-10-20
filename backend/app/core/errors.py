@@ -135,6 +135,53 @@ class EventNormalizationException(AppException):
         )
 
 
+class UnsupportedMediaTypeException(AppException):
+    def __init__(self, message: str = "Unsupported file media type.") -> None:
+        super().__init__(
+            message=message,
+            code="UNSUPPORTED_MEDIA_TYPE",
+            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+        )
+
+
+class DocumentExtractionException(AppException):
+    def __init__(self, message: str = "Failed to extract text from document content.") -> None:
+        super().__init__(
+            message=message,
+            code="DOCUMENT_EXTRACTION_FAILED",
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+        )
+
+
+class DocumentProcessingException(AppException):
+    def __init__(
+        self, message: str = "Error encountered during document processing pipeline."
+    ) -> None:
+        super().__init__(
+            message=message,
+            code="DOCUMENT_PROCESSING_FAILED",
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+        )
+
+
+class StorageException(AppException):
+    def __init__(self, message: str = "Object storage operation failed.") -> None:
+        super().__init__(
+            message=message,
+            code="STORAGE_ERROR",
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
+
+
+class PathTraversalException(AppException):
+    def __init__(self, message: str = "Illegal storage key path traversal attempted.") -> None:
+        super().__init__(
+            message=message,
+            code="SECURITY_VIOLATION",
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
+
+
 def register_error_handlers(app: FastAPI) -> None:
     """Register uniform RFC 7807/structured error handlers with the FastAPI application."""
 

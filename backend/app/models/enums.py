@@ -173,3 +173,44 @@ def can_transition_ticket_status(current: TicketStatus, target: TicketStatus) ->
         return True
     allowed = VALID_TICKET_TRANSITIONS.get(current, set())
     return target in allowed
+
+
+class KnowledgeBaseStatus(StrEnum):
+    ACTIVE = "active"
+    ARCHIVED = "archived"
+
+
+class DocumentSourceType(StrEnum):
+    FILE_UPLOAD = "file_upload"
+    MANUAL_ENTRY = "manual_entry"
+    API = "api"
+
+
+class DocumentMediaType(StrEnum):
+    PDF = "application/pdf"
+    DOCX = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    TXT = "text/plain"
+    MARKDOWN = "text/markdown"
+
+
+class DocumentProcessingStatus(StrEnum):
+    UPLOADED = "uploaded"
+    STORED = "stored"
+    QUEUED = "queued"
+    EXTRACTING = "extracting"
+    EXTRACTED = "extracted"
+    NORMALIZING = "normalizing"
+    NORMALIZED = "normalized"
+    CHUNKING = "chunking"
+    CHUNKED = "chunked"
+    READY_FOR_INDEXING = "ready_for_indexing"
+    INDEXED = "indexed"
+    RETRY_WAIT = "retry_wait"
+    FAILED = "failed"
+    QUARANTINED = "quarantined"
+
+
+class DocumentLifecycleStatus(StrEnum):
+    ACTIVE = "active"
+    ARCHIVED = "archived"
+    DELETED = "deleted"
