@@ -19,17 +19,25 @@ from app.core.dependencies import OrganizationContext, require_permission
 from app.core.rbac import Permission
 from app.db.session import get_db_session
 from app.schemas.knowledge import (
+    CitationResponse,
     DocumentChunkListResponse,
     DocumentChunkResponse,
     DocumentListResponse,
     DocumentResponse,
     DocumentUploadResponse,
     DocumentVersionResponse,
+    EvidenceItemResponse,
+    KnowledgeAnswerRequest,
+    KnowledgeAnswerResponse,
     KnowledgeBaseCreate,
     KnowledgeBaseListResponse,
     KnowledgeBaseResponse,
+    KnowledgeSearchRequest,
+    KnowledgeSearchResponse,
 )
 from app.services.document_service import DocumentService
+from app.services.rag.answer import GroundedAnswerService
+from app.services.rag.retrieval import RetrievalService
 
 router = APIRouter(prefix="/organizations/{organization_id}", tags=["Knowledge Base"])
 
@@ -323,3 +331,168 @@ async def get_document_chunks(
         items=[DocumentChunkResponse.model_validate(c) for c in chunks],
         total=total,
     )
+
+
+# ==========================================
+# Retrieval & Grounded Answering
+# ==========================================
+
+
+@router.post(
+    "/knowledge-bases/{knowledge_base_id}/search",
+    response_model=KnowledgeSearchResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Search knowledge base",
+    description="Execute authorized semantic and hybrid search over knowledge base documents.",
+)
+async def search_knowledge_base(
+    knowledge_base_id: Annotated[uuid.UUID, Path(..., description="Target knowledge base ID")],
+    payload: KnowledgeSearchRequest,
+    context: Annotated[OrganizationContext, Depends(require_permission(Permission.KNOWLEDGE_READ))],
+    db: Annotated[AsyncSession, Depends(get_db_session)],
+) -> KnowledgeSearchResponse:
+    # 1. Verify parent knowledge base exists and belongs to this organization
+    doc_service = DocumentService(db)
+    await doc_service.get_knowledge_base(context.organization.id, knowledge_base_id)
+
+    # 2. Execute authoritative retrieval
+    retrieval_service = RetrievalService(db)
+    evidence, latency_ms = await retrieval_service.retrieve(
+        query=payload.query,
+        organization_id=context.organization.id,
+        knowledge_base_ids=[knowledge_base_id],
+        top_k=payload.top_k,
+        min_score=payload.min_score,
+        enable_hybrid=payload.enable_hybrid,
+    )
+
+    return KnowledgeSearchResponse(
+        query=payload.query,
+        evidence=[EvidenceItemResponse.model_validate(ev.model_dump()) for ev in evidence],
+        total_results=len(evidence),
+        retrieval_latency_ms=round(latency_ms, 2),
+    )
+
+
+@router.post(
+    "/knowledge-bases/{knowledge_base_id}/answer",
+    response_model=KnowledgeAnswerResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Ask grounded question",
+    description="Generate an evidence-grounded answer with verified citations and abstention handling.",
+)
+async def answer_knowledge_question(
+    knowledge_base_id: Annotated[uuid.UUID, Path(..., description="Target knowledge base ID")],
+    payload: KnowledgeAnswerRequest,
+    context: Annotated[OrganizationContext, Depends(require_permission(Permission.KNOWLEDGE_READ))],
+    db: Annotated[AsyncSession, Depends(get_db_session)],
+) -> KnowledgeAnswerResponse:
+    # 1. Verify parent knowledge base exists and belongs to this organization
+    doc_service = DocumentService(db)
+    await doc_service.get_knowledge_base(context.organization.id, knowledge_base_id)
+
+    # 2. Execute authoritative retrieval
+    retrieval_service = RetrievalService(db)
+    evidence, retrieval_latency_ms = await retrieval_service.retrieve(
+        query=payload.question,
+        organization_id=context.organization.id,
+        knowledge_base_ids=[knowledge_base_id],
+        top_k=payload.top_k,
+        min_score=payload.min_score,
+        enable_hybrid=payload.enable_hybrid,
+    )
+
+    # 3. Generate grounded answer
+    answer_service = GroundedAnswerService()
+    result = await answer_service.generate_answer(
+        question=payload.question,
+        evidence=evidence,
+        retrieval_latency_ms=retrieval_latency_ms,
+    )
+
+    return KnowledgeAnswerResponse(
+        question=result.question,
+        answer=result.answer,
+        citations=[CitationResponse.model_validate(c.model_dump()) for c in result.citations],
+        evidence=[EvidenceItemResponse.model_validate(ev.model_dump()) for ev in result.evidence],
+        abstention_status=result.abstention_status,
+        abstention_reason=result.abstention_reason,
+        model_name=result.model_name,
+        retrieval_latency_ms=result.retrieval_latency_ms,
+        generation_latency_ms=result.generation_latency_ms,
+        total_latency_ms=result.total_latency_ms,
+    )
+
+
+@router.post(
+    "/knowledge/search",
+    response_model=KnowledgeSearchResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Organization-wide knowledge search",
+    description="Execute authorized semantic and hybrid search across all active knowledge bases.",
+)
+async def search_organization_knowledge(
+    payload: KnowledgeSearchRequest,
+    context: Annotated[OrganizationContext, Depends(require_permission(Permission.KNOWLEDGE_READ))],
+    db: Annotated[AsyncSession, Depends(get_db_session)],
+) -> KnowledgeSearchResponse:
+    retrieval_service = RetrievalService(db)
+    evidence, latency_ms = await retrieval_service.retrieve(
+        query=payload.query,
+        organization_id=context.organization.id,
+        knowledge_base_ids=None,
+        top_k=payload.top_k,
+        min_score=payload.min_score,
+        enable_hybrid=payload.enable_hybrid,
+    )
+
+    return KnowledgeSearchResponse(
+        query=payload.query,
+        evidence=[EvidenceItemResponse.model_validate(ev.model_dump()) for ev in evidence],
+        total_results=len(evidence),
+        retrieval_latency_ms=round(latency_ms, 2),
+    )
+
+
+@router.post(
+    "/knowledge/answer",
+    response_model=KnowledgeAnswerResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Organization-wide grounded question answering",
+    description="Generate an evidence-grounded answer across all active knowledge collections.",
+)
+async def answer_organization_knowledge(
+    payload: KnowledgeAnswerRequest,
+    context: Annotated[OrganizationContext, Depends(require_permission(Permission.KNOWLEDGE_READ))],
+    db: Annotated[AsyncSession, Depends(get_db_session)],
+) -> KnowledgeAnswerResponse:
+    retrieval_service = RetrievalService(db)
+    evidence, retrieval_latency_ms = await retrieval_service.retrieve(
+        query=payload.question,
+        organization_id=context.organization.id,
+        knowledge_base_ids=None,
+        top_k=payload.top_k,
+        min_score=payload.min_score,
+        enable_hybrid=payload.enable_hybrid,
+    )
+
+    answer_service = GroundedAnswerService()
+    result = await answer_service.generate_answer(
+        question=payload.question,
+        evidence=evidence,
+        retrieval_latency_ms=retrieval_latency_ms,
+    )
+
+    return KnowledgeAnswerResponse(
+        question=result.question,
+        answer=result.answer,
+        citations=[CitationResponse.model_validate(c.model_dump()) for c in result.citations],
+        evidence=[EvidenceItemResponse.model_validate(ev.model_dump()) for ev in result.evidence],
+        abstention_status=result.abstention_status,
+        abstention_reason=result.abstention_reason,
+        model_name=result.model_name,
+        retrieval_latency_ms=result.retrieval_latency_ms,
+        generation_latency_ms=result.generation_latency_ms,
+        total_latency_ms=result.total_latency_ms,
+    )
+

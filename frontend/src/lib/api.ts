@@ -16,6 +16,9 @@ import type {
   Message,
   MessageListResponse,
   MessageCreatePayload,
+  KnowledgeBaseListResponse,
+  KnowledgeSearchResponse,
+  KnowledgeAnswerResponse,
 } from "../types/api";
 
 export class ApiError extends Error {
@@ -209,6 +212,51 @@ export const apiClient = {
     return typedFetch<Message>(`/api/v1/organizations/${orgId}/conversations/${convId}/messages`, {
       method: "POST",
       body: JSON.stringify(payload),
+    });
+  },
+
+  /**
+   * List active knowledge bases for an organization
+   */
+  async listKnowledgeBases(orgId: string): Promise<KnowledgeBaseListResponse> {
+    return typedFetch<KnowledgeBaseListResponse>(`/api/v1/organizations/${orgId}/knowledge-bases`);
+  },
+
+  /**
+   * Search knowledge base collections with ranked evidence
+   */
+  async searchKnowledge(
+    orgId: string,
+    kbId: string | null,
+    query: string,
+    topK: number = 5,
+    minScore?: number
+  ): Promise<KnowledgeSearchResponse> {
+    const endpoint = kbId
+      ? `/api/v1/organizations/${orgId}/knowledge-bases/${kbId}/search`
+      : `/api/v1/organizations/${orgId}/knowledge/search`;
+    return typedFetch<KnowledgeSearchResponse>(endpoint, {
+      method: "POST",
+      body: JSON.stringify({ query, top_k: topK, min_score: minScore }),
+    });
+  },
+
+  /**
+   * Ask an evidence-grounded question with verified citations and abstention
+   */
+  async askKnowledge(
+    orgId: string,
+    kbId: string | null,
+    question: string,
+    topK: number = 5,
+    minScore?: number
+  ): Promise<KnowledgeAnswerResponse> {
+    const endpoint = kbId
+      ? `/api/v1/organizations/${orgId}/knowledge-bases/${kbId}/answer`
+      : `/api/v1/organizations/${orgId}/knowledge/answer`;
+    return typedFetch<KnowledgeAnswerResponse>(endpoint, {
+      method: "POST",
+      body: JSON.stringify({ question, top_k: topK, min_score: minScore }),
     });
   },
 };

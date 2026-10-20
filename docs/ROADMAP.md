@@ -121,48 +121,66 @@ graph TD
 
 ---
 
-### Phase 06: Vector Indexing, Qdrant Integration & Semantic Retrieval
-- **Status**: Scheduled
+### Phase 06: Evidence-Grounded Retrieval & Answering Foundation
+- **Status**: **COMPLETE / VERIFIED**
 - **Dependencies**: Phase 02, Phase 05
-- **Scope**:
-  - Vector embedding generation and embedding model provider integration.
-  - Qdrant multi-tenant collection indexing and payload filtering.
-  - Hybrid similarity and keyword retrieval with citation provenance.
+- **Scope & Deliverables**:
+  - Dense semantic vector embeddings via `EmbeddingProvider` abstraction (`FastEmbedEmbeddingProvider` with `BAAI/bge-small-en-v1.5` 384 dims running via ONNX Runtime, plus `OpenAIEmbeddingProvider`).
+  - Strict vector validation verifying dimensional compatibility and finite float values (`math.isfinite`), actively rejecting non-finite and NaN vectors.
+  - Qdrant vector store manager (`QdrantStoreManager`) with deterministic UUIDv5 point identities, collection parameter drift detection, minimal indexing payloads, and local in-memory fallback for offline test environments.
+  - Durable background indexing integrated into `DocumentWorker`, advancing versions to `INDEXED` only upon verified vector upsert and safely preserving prior usable versions on error.
+  - Soft-deletion vector de-indexing in Qdrant upon document archiving/deletion.
+  - Dedicated `RetrievalService` supporting query validation, dense vector search, lexical PostgreSQL search (`tsvector`), Reciprocal Rank Fusion (RRF), and authoritative PostgreSQL Row-Level Security verification.
+  - Dual-layer tenant isolation: server-enforced Qdrant payload filters AND authoritative PostgreSQL post-retrieval cross-checks.
+  - Grounded answer generation (`GroundedAnswerService`) with prompt-injection defense (`<evidence>` XML boundaries, passive data directives), verified citation resolution (`[citation:N]`), and automated abstention (`NO_RELEVANT_EVIDENCE`, `EVIDENCE_INSUFFICIENT`).
+  - Next.js frontend interactive search and Q&A interface at `/knowledge` with collection filtering, citation drawers, and loading/error states.
+  - Automated evaluation framework (`RAGEvaluator`) measuring Recall@k, Mean Reciprocal Rank (MRR), citation validity rate, and abstention accuracy against an explicitly labeled dataset.
+  - 100% automated test coverage (unit, API, tenant isolation, and live PostgreSQL integration tests).
 
 ---
 
-### Phase 06: Policy Enforcement & Human-in-the-Loop Approvals
+### Phase 07: Response Verification & Claim-Level Fact Checking
 - **Status**: Scheduled
-- **Dependencies**: Phase 03, Phase 05
+- **Dependencies**: Phase 05, Phase 06
+- **Scope**:
+  - Automated decomposition of model completions into atomic verifiable claims.
+  - Strict claim-level NLI contradiction detection and evidence grounding verification.
+  - Hallucination suppression before draft or response delivery.
+
+---
+
+### Phase 08: Policy Enforcement & Human-in-the-Loop Approvals
+- **Status**: Scheduled
+- **Dependencies**: Phase 03, Phase 07
 - **Scope**:
   - Policy decision engine identifying high-risk actions (e.g. refunds, cancellations, escalations).
-  - Human agent approval interception workflow.
+  - Human agent approval interception workflow and review queues.
   - Immutable audit trail of agent approvals and rejections.
 
 ---
 
-### Phase 07: Durable AI Workflow Orchestration & Forensic Failure Investigation
+### Phase 09: Durable AI Workflow Orchestration & Forensic Failure Investigation
 - **Status**: Scheduled
-- **Dependencies**: Phase 05, Phase 06
+- **Dependencies**: Phase 06, Phase 08
 - **Scope**:
   - Redis-backed durable workflow orchestration for asynchronous support tasks.
   - Forensic diagnostic tools tracing failure root causes (retrieval gaps, prompt drift, policy conflicts).
 
 ---
 
-### Phase 08: Operational Analytics & Repeatable AI Evaluation
+### Phase 10: Operational Analytics & Repeatable AI Evaluation
 - **Status**: Scheduled
-- **Dependencies**: Phase 07
+- **Dependencies**: Phase 09
 - **Scope**:
-  - Automated evaluation benchmarks on real support datasets.
-  - Accuracy metrics, citation fidelity scoring, and latency analytics.
+  - Production evaluation benchmarks on live support datasets.
+  - Accuracy metrics, citation fidelity scoring, latency analytics, and drift monitoring.
 
 ---
 
-### Phase 09: Live Agent Handoff, Embeddable Chat Widget & Commercial Admin
+### Phase 11: Live Agent Handoff, Embeddable Chat Widget & Commercial Admin
 - **Status**: Scheduled
-- **Dependencies**: Phase 03, Phase 08
+- **Dependencies**: Phase 03, Phase 10
 - **Scope**:
-  - Embeddable customer chat widget.
+  - Embeddable customer chat widget with real-time streaming.
   - Seamless real-time agent handoff with conversation context transfer.
   - Commercial subscription metering and billing administration.

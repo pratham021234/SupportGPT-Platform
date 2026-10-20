@@ -382,11 +382,75 @@ When a new version (v2) is uploaded for an existing document:
 
 ---
 
-## 10. Known Limitations & Deferred Work
-1. **Vector Indexing & Embedding Generation**: Generating vector embeddings with external providers and indexing chunks into Qdrant is strictly deferred to Phase 06.
-2. **Optical Character Recognition (OCR)**: Scanned PDFs and image-only documents are flagged as `OCR_UNAVAILABLE`; OCR engine integration (e.g. Tesseract) is deferred.
-3. **Multi-Node Cloud Object Storage**: S3/GCS-compatible object storage adapters are deferred; local filesystem storage is active for single-node deployments.
-4. **AI Generation & Human Approvals**: LLM response generation, claim verification, and human approval workflows are deferred to future phases.
+## 10. Phase 06 — Evidence-Grounded Retrieval & Answering Foundation
+
+### 10.1 Retrieval & Answering Architecture
+
+```mermaid
+graph TD
+    UserQuery["User Query (Authorized Session)"] --> Val["Query Validation & Sanitization"]
+    Val --> Embed["FastEmbed (BAAI/bge-small-en-v1.5 / 384d)"]
+    Embed --> Qdrant["Qdrant Vector Store (Tenant Filtered)"]
+    
+    Val -.->|Optional Hybrid| FTS["PostgreSQL Full-Text Search (tsvector)"]
+    Qdrant --> RRF["Reciprocal Rank Fusion (RRF k=60)"]
+    FTS -.-> RRF
+    
+    RRF --> Cand["Top-K Candidate Chunks"]
+    Cand --> PGCheck["Authoritative PostgreSQL Verification (RLS)"]
+    
+    PGCheck -->|Purge Inactive/Foreign| Verified["Verified Evidence Items"]
+    Verified --> Ground["Grounded Answering Service"]
+    
+    Ground --> Prompt["Prompt Assembly (<evidence> Boundaries)"]
+    Prompt --> LLM["LLM Generation with Anti-Injection Rules"]
+    LLM --> CitVal["Citation Validation ([citation:N] Resolution)"]
+    CitVal --> Ans["Structured Grounded Response / Abstention"]
+```
+
+### 10.2 Real Semantic Embedding Providers
+- **`FastEmbedEmbeddingProvider`**: Local, self-contained ONNX runtime utilizing `BAAI/bge-small-en-v1.5` generating 384-dimensional dense vectors. Requires zero external network calls or cloud API keys.
+- **`OpenAIEmbeddingProvider`**: Configurable cloud alternative (`text-embedding-3-small` / 1536 dims).
+- **Validation**: Strict finite float checks (`math.isfinite`) and dimension checks on all generated vectors. Rejects non-finite, NaN, or dimension-mismatched vectors.
+
+### 10.3 Qdrant Vector Collection & Lifecycle
+- **Point Identities**: Deterministic UUIDs derived from canonical chunk UUIDs (`uuid5`).
+- **Minimal Payloads**: Payloads store only metadata necessary for filtering and traceability (`organization_id`, `knowledge_base_id`, `document_id`, `document_version_id`, `chunk_id`, `sequence_number`, `heading_hierarchy`, `checksum`, `source_title`).
+- **Dimension Drift Protection**: `QdrantStoreManager` inspects collection vector parameters on initialization; dimension mismatches raise `VectorDimensionMismatchException` to prevent index corruption.
+- **Tenant Filtering**: All queries enforce server-derived `organization_id` filter conditions.
+
+### 10.4 Durable Indexing in DocumentWorker
+- The background `DocumentWorker` extracts and normalizes document chunks, persists them in PostgreSQL, generates dense embeddings, and upserts them to Qdrant.
+- Version status advances to `INDEXED` only after verified Qdrant upsert.
+- Reprocessing idempotency is guaranteed by deleting existing vectors for the version before re-inserting.
+- Soft deletion of a document or version triggers `delete_by_document_id` in Qdrant.
+
+### 10.5 Hybrid Retrieval & Authoritative Verification
+- **Reciprocal Rank Fusion (RRF)**: Combines dense vector retrieval with lexical PostgreSQL search (`tsvector` / `to_tsquery`) using $RRF(d) = \sum \frac{1}{60 + r(d)}$.
+- **Authoritative Database Verification**: Qdrant search results are cross-checked against PostgreSQL with Row-Level Security active. Chunks belonging to archived or deleted documents, unverified organizations, or superseded versions are stripped.
+
+### 10.6 Grounded Answering & Prompt-Injection Defense
+- **XML Evidence Delimitation**: Retrieved excerpts are isolated in `<evidence id="..." index="N">` tags.
+- **Anti-Injection Directives**: Model is strictly instructed to treat document content as passive text rather than executable instructions.
+- **Citation Verification**: Responses must format citations as `[citation:N]`. Citations are parsed and verified against the retrieved evidence set; hallucinated or ungrounded citations are stripped.
+- **Automated Abstention**: System abstains with structured reasons (`NO_RELEVANT_EVIDENCE`, `EVIDENCE_INSUFFICIENT`, `OUT_OF_DOMAIN`) when evidence is absent or insufficient.
+
+### 10.7 Evaluation Framework
+Deterministic metrics measured against labeled test queries:
+- **Recall@k**: Fraction of queries with expected evidence in top-k.
+- **Mean Reciprocal Rank (MRR)**: Average reciprocal rank of the first relevant chunk.
+- **Citation Validity**: Proportion of citations resolving to valid retrieved chunks.
+- **Abstention Accuracy**: Proportion of unanswerable queries correctly abstained and answerable queries answered.
+
+---
+
+## 11. Known Limitations & Deferred Work
+1. **Optical Character Recognition (OCR)**: Scanned PDFs and image-only documents are flagged as `OCR_UNAVAILABLE`; OCR engine integration (e.g. Tesseract) is deferred.
+2. **Multi-Node Cloud Object Storage**: S3/GCS-compatible object storage adapters are deferred; local filesystem storage is active for single-node deployments.
+3. **Response Verification & Claim-Level Fact Checking**: Claim decomposition, contradiction detection, and policy enforcement are deferred to Phase 07.
+4. **Human Approval Workflows**: Human-in-the-loop review queues and draft escalation are deferred to Phase 08.
+5. **Autonomous Customer Replies**: Automated sending of customer replies is strictly prohibited in Phase 06.
+
 
 
 

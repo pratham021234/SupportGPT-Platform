@@ -16,6 +16,8 @@ from app.models.document_version import DocumentVersion
 from app.models.enums import DocumentProcessingStatus
 from app.services.chunking import HierarchicalStructuralChunker, TextNormalizer
 from app.services.extraction import get_extractor
+from app.services.rag.embedding import BaseEmbeddingProvider, get_embedding_provider
+from app.services.rag.qdrant_store import QdrantStoreManager, get_qdrant_store
 from app.services.storage import get_storage_backend
 
 logger = get_logger("supportgpt.document_worker")
@@ -33,13 +35,15 @@ async def _set_worker_admin_context(session: AsyncSession) -> None:
 
 
 class DocumentWorker:
-    """Asynchronous background worker processing uploaded documents through the extraction and chunking pipeline."""
+    """Asynchronous background worker processing uploaded documents through the extraction, chunking, and vector indexing pipeline."""
 
     def __init__(
         self,
         session_factory: async_sessionmaker[AsyncSession],
         settings: Settings | None = None,
         worker_id: str | None = None,
+        embedding_provider: BaseEmbeddingProvider | None = None,
+        qdrant_store: QdrantStoreManager | None = None,
     ) -> None:
         self.session_factory = session_factory
         self.settings = settings or get_settings()
@@ -50,6 +54,8 @@ class DocumentWorker:
             chunk_size=self.settings.DEFAULT_CHUNK_SIZE_CHARS,
             chunk_overlap=self.settings.DEFAULT_CHUNK_OVERLAP_CHARS,
         )
+        self.embedding_provider = embedding_provider or get_embedding_provider()
+        self.qdrant_store = qdrant_store or get_qdrant_store()
 
     async def reclaim_abandoned_leases(self) -> int:
         """Identify versions with expired worker leases and reschedule or fail them."""
@@ -212,8 +218,20 @@ class DocumentWorker:
                     )
 
                 session.add_all(chunk_models)
+                await session.flush()
 
-                # 6. Update version status and metadata
+                # 6. Real Vector Indexing into Qdrant
+                chunk_texts = [c.content for c in chunk_models]
+                if chunk_texts:
+                    version.processing_status = DocumentProcessingStatus.READY_FOR_INDEXING
+                    # Delete any previous vector points for this version (reprocessing idempotency)
+                    self.qdrant_store.delete_by_version_id(version.id)
+                    # Generate real dense vector embeddings using configured provider
+                    vectors = await self.embedding_provider.embed_texts(chunk_texts)
+                    chunks_with_vectors = list(zip(chunk_models, vectors, strict=True))
+                    self.qdrant_store.upsert_chunks(chunks_with_vectors)
+
+                # 7. Update version status and metadata
                 version.extractor_name = extractor.name
                 version.extractor_version = extractor.version
                 version.chunker_name = "HierarchicalStructuralChunker"
@@ -221,23 +239,23 @@ class DocumentWorker:
                 version.chunk_count = len(chunk_items)
                 version.word_count = extract_res.word_count
                 version.character_count = len(normalized_text)
-                version.processing_status = DocumentProcessingStatus.CHUNKED
+                version.processing_status = DocumentProcessingStatus.INDEXED
                 version.error_code = None
                 version.error_summary = None
                 version.locked_by = None
                 version.processing_started_at = None
 
-                # 7. Atomically promote version in parent Document if this is latest or current
+                # 8. Atomically promote version in parent Document if this is latest or current
                 if document.current_version_number <= version.version_number:
                     document.current_version_id = version.id
                     document.current_version_number = version.version_number
-                    document.status = DocumentProcessingStatus.CHUNKED
+                    document.status = DocumentProcessingStatus.INDEXED
                     document.error_code = None
                     document.error_summary = None
 
                 await session.commit()
                 logger.info(
-                    "Successfully processed document %s version %d (%d chunks).",
+                    "Successfully processed and indexed document %s version %d (%d chunks).",
                     str(document.id),
                     version.version_number,
                     len(chunk_items),

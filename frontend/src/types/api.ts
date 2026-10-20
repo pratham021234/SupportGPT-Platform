@@ -197,3 +197,68 @@ export interface CustomerListResponse {
   offset: number;
 }
 
+export interface KnowledgeBase {
+  id: string;
+  organization_id: string;
+  name: string;
+  description: string | null;
+  status: "active" | "archived";
+  config: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface KnowledgeBaseListResponse {
+  items: KnowledgeBase[];
+  total: number;
+}
+
+export interface EvidenceItem {
+  evidence_id: string;
+  chunk_id: string;
+  document_id: string;
+  document_version_id: string;
+  knowledge_base_id: string;
+  source_title: string;
+  section_title: string | null;
+  heading_hierarchy: string[];
+  relevant_excerpt: string;
+  retrieval_rank: number;
+  retrieval_score: number;
+  scoring_method: string;
+  citation_reference: string;
+}
+
+export interface KnowledgeSearchResponse {
+  query: string;
+  evidence: EvidenceItem[];
+  total_results: number;
+  retrieval_latency_ms: number;
+}
+
+export interface CitationItem {
+  citation_number: number;
+  citation_marker: string;
+  evidence_id: string;
+  chunk_id: string;
+  document_id: string;
+  source_title: string;
+  section_title: string | null;
+  excerpt: string;
+  retrieval_score: number;
+}
+
+export interface KnowledgeAnswerResponse {
+  question: string;
+  answer: string;
+  citations: CitationItem[];
+  evidence: EvidenceItem[];
+  abstention_status: boolean;
+  abstention_reason: string | null;
+  model_name: string | null;
+  retrieval_latency_ms: number;
+  generation_latency_ms: number;
+  total_latency_ms: number;
+}
+
+

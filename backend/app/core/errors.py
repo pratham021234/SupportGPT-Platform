@@ -182,6 +182,62 @@ class PathTraversalException(AppException):
         )
 
 
+class EmbeddingGenerationException(AppException):
+    def __init__(self, message: str = "Vector embedding generation failed.") -> None:
+        super().__init__(
+            message=message,
+            code="EMBEDDING_GENERATION_FAILED",
+            status_code=status.HTTP_502_BAD_GATEWAY,
+        )
+
+
+class VectorStoreUnavailableException(AppException):
+    def __init__(self, message: str = "Vector database service is unavailable.") -> None:
+        super().__init__(
+            message=message,
+            code="VECTOR_STORE_UNAVAILABLE",
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        )
+
+
+class VectorDimensionMismatchException(AppException):
+    def __init__(
+        self, message: str = "Embedding dimension does not match collection configuration."
+    ) -> None:
+        super().__init__(
+            message=message,
+            code="VECTOR_DIMENSION_MISMATCH",
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
+
+
+class VectorIndexingException(AppException):
+    def __init__(self, message: str = "Vector indexing operation failed.") -> None:
+        super().__init__(
+            message=message,
+            code="VECTOR_INDEXING_FAILED",
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
+
+
+class InvalidRetrievalQueryException(AppException):
+    def __init__(self, message: str = "Retrieval query is invalid or exceeds limits.") -> None:
+        super().__init__(
+            message=message,
+            code="INVALID_RETRIEVAL_QUERY",
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
+
+
+class LLMGenerationException(AppException):
+    def __init__(self, message: str = "Grounded answer generation failed.") -> None:
+        super().__init__(
+            message=message,
+            code="LLM_GENERATION_FAILED",
+            status_code=status.HTTP_502_BAD_GATEWAY,
+        )
+
+
 def register_error_handlers(app: FastAPI) -> None:
     """Register uniform RFC 7807/structured error handlers with the FastAPI application."""
 

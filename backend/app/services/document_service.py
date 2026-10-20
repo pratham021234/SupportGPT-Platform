@@ -26,6 +26,7 @@ from app.models.enums import (
 )
 from app.models.knowledge_base import KnowledgeBase
 from app.services.extraction.validator import validate_document_file
+from app.services.rag.qdrant_store import get_qdrant_store
 from app.services.storage import get_storage_backend
 
 logger = get_logger("supportgpt.document_service")
@@ -311,6 +312,13 @@ class DocumentService:
         doc.deleted_at = datetime.now(UTC)
         await self.session.commit()
         await self.session.refresh(doc)
+
+        # De-index vectors from Qdrant
+        try:
+            get_qdrant_store().delete_by_document_id(document_id)
+        except Exception as q_exc:
+            logger.warning("Failed to de-index document %s from Qdrant: %s", str(document_id), str(q_exc))
+
         return doc
 
     async def get_document(

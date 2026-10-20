@@ -6,7 +6,7 @@ SupportGPT AI is a commercial-grade, multi-tenant B2B SaaS platform engineered f
 
 ---
 
-## 1. Engineering Status: Phase 00, Phase 01, Phase 02, Phase 03, Phase 04 & Phase 05 Completed
+## 1. Engineering Status: Phase 00, Phase 01, Phase 02, Phase 03, Phase 04, Phase 05 & Phase 06 Completed
 
 - **Phase 00 Foundation & Standards**:
   - **Architecture**: Modular Monolith with clean domain boundaries (`api/`, `core/`, `db/`, `models/`, `schemas/`, `ai/`).
@@ -53,6 +53,15 @@ SupportGPT AI is a commercial-grade, multi-tenant B2B SaaS platform engineered f
   - **Prior Version Preservation & Worker Concurrency**: `DocumentWorker` executing PostgreSQL `FOR UPDATE SKIP LOCKED` claiming, crash lease recovery (300s timeout), exponential retry backoff, and version preservation (failed new versions keep prior usable versions active).
   - **Alembic Migration**: `0006_knowledge_base_subsystem` applied to both `supportgpt_db` and `supportgpt_test_db` with active PostgreSQL Row-Level Security (RLS) policies.
   - **RESTful Endpoints**: Full organization-scoped APIs for knowledge base collections, document uploads, revisions, reprocessing, soft delete, and chunk provenance with RBAC enforcement.
+- **Phase 06 Evidence-Grounded Retrieval & Answering Foundation**:
+  - **Real Dense Semantic Embeddings**: `EmbeddingProvider` abstraction with local ONNX `FastEmbedEmbeddingProvider` (`BAAI/bge-small-en-v1.5`, 384 dims) and `OpenAIEmbeddingProvider`. Strict dimensional checking and finite float value validation.
+  - **Qdrant Vector Indexing**: `QdrantStoreManager` with deterministic UUIDv5 point identities, collection parameter drift detection, minimal payloads, and tenant isolation filters.
+  - **Durable Indexing Integration**: `DocumentWorker` advances document versions to `INDEXED` only after successful vector embedding and verified Qdrant upsert. Reprocessing idempotency and deletion de-indexing.
+  - **Dedicated Retrieval Service**: Query normalization, hybrid search combining dense vectors and PostgreSQL full-text search (`tsvector`), Reciprocal Rank Fusion (RRF), and authoritative PostgreSQL Row-Level Security post-verification.
+  - **Dual-Layer Tenant Isolation**: Mandatory server-enforced Qdrant payload filters combined with authoritative database verification purging unauthorized, deleted, or superseded versions.
+  - **Grounded Answer Generation & Anti-Injection**: Strict `<evidence>` XML boundary isolation, anti-injection system prompt directives, verified `[citation:N]` citation resolution, and automated abstention (`NO_RELEVANT_EVIDENCE`, `EVIDENCE_INSUFFICIENT`).
+  - **Repeatable Evaluation Framework**: `RAGEvaluator` computing measured Recall@k, Mean Reciprocal Rank (MRR), citation validity, and abstention accuracy against an explicitly labeled dataset.
+  - **Frontend Search & Grounded Q&A**: Interactive Next.js console at `/knowledge` with tenant selector, collection filtering, citation inspectors, and latency/model diagnostics.
 
 ---
 
@@ -164,4 +173,6 @@ cmd /c npm run build
 - [ADR 0005: Production Authentication, Session Lifecycle, RBAC & PostgreSQL RLS](docs/adr/0005-production-authentication-and-rbac.md)
 - [ADR 0006: Ticket Management, Conversation Services & Concurrency Control](docs/adr/0006-ticket-management-and-conversation-services.md)
 - [ADR 0007: Reliable Event Ingestion, Webhooks & Background Worker Architecture](docs/adr/0007-reliable-event-ingestion-and-worker-architecture.md)
+- [ADR 0008: Enterprise Knowledge Base, Document Processing & Versioning Foundation](docs/adr/0008-knowledge-base-document-processing-and-versioning.md)
+- [ADR 0009: Evidence-Grounded Retrieval and Answering Foundation](docs/adr/0009-evidence-grounded-retrieval-and-answering.md)
 

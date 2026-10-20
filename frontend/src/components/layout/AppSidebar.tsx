@@ -68,9 +68,9 @@ export function AppSidebar() {
             />
             <NavigationItem
               label="Knowledge Engine"
-              href="/modules/knowledge"
+              href="/knowledge"
               icon={<BookOpen className="w-4 h-4" />}
-              badge={{ text: "Phase 04", variant: "neutral" }}
+              badge={{ text: "Phase 06", variant: "success" }}
             />
             <NavigationItem
               label="Response Verification"

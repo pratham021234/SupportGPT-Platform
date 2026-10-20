@@ -176,12 +176,76 @@ class Settings(BaseSettings):
         description="Document background worker poll interval in seconds",
     )
 
-    # Vector Storage
+    # Vector Storage (Qdrant)
     QDRANT_HOST: str = Field(default="localhost", description="Qdrant vector engine host")
     QDRANT_PORT: int = Field(default=6333, description="Qdrant HTTP port")
     QDRANT_API_KEY: str | None = Field(default=None, description="Optional Qdrant API key")
+    QDRANT_COLLECTION_NAME: str = Field(
+        default="supportgpt_knowledge_chunks",
+        description="Qdrant collection name for knowledge chunks",
+    )
+    QDRANT_LOCATION: str | None = Field(
+        default=None,
+        description="Explicit Qdrant location, e.g. ':memory:' or file path. If None, connects to QDRANT_HOST:QDRANT_PORT",
+    )
+    QDRANT_PATH: str | None = Field(
+        default=None,
+        description="Local on-disk storage directory for Qdrant embedded mode",
+    )
+    QDRANT_TIMEOUT_SECONDS: float = Field(
+        default=10.0,
+        description="Qdrant network request timeout in seconds",
+    )
 
-    # AI Provider Abstraction Defaults
+    # Embedding Provider Configuration
+    EMBEDDING_PROVIDER: str = Field(
+        default="fastembed",
+        description="Embedding provider abstraction: 'fastembed', 'openai', or 'custom'",
+    )
+    EMBEDDING_MODEL_NAME: str = Field(
+        default="BAAI/bge-small-en-v1.5",
+        description="Embedding model identifier",
+    )
+    EMBEDDING_DIMENSIONS: int = Field(
+        default=384,
+        description="Embedding vector dimensions",
+    )
+    EMBEDDING_BATCH_SIZE: int = Field(
+        default=32,
+        description="Max batch size for vector generation",
+    )
+    EMBEDDING_API_KEY: str | None = Field(
+        default=None,
+        description="API key for external embedding provider (OpenAI, etc.)",
+    )
+    EMBEDDING_ENDPOINT: str | None = Field(
+        default=None,
+        description="Custom base URL for embedding provider API",
+    )
+
+    # Retrieval Configuration
+    RETRIEVAL_TOP_K_DEFAULT: int = Field(
+        default=5,
+        description="Default number of evidence items retrieved",
+    )
+    RETRIEVAL_TOP_K_MAX: int = Field(
+        default=20,
+        description="Maximum number of evidence items retrieved",
+    )
+    RETRIEVAL_SIMILARITY_THRESHOLD: float = Field(
+        default=0.45,
+        description="Minimum cosine similarity threshold for retrieved evidence",
+    )
+    RETRIEVAL_ENABLE_HYBRID: bool = Field(
+        default=True,
+        description="Enable hybrid vector + PostgreSQL full-text retrieval",
+    )
+    RETRIEVAL_RRF_K: int = Field(
+        default=60,
+        description="Reciprocal Rank Fusion smoothing parameter",
+    )
+
+    # AI Provider & Grounded Answering Defaults
     AI_DEFAULT_PROVIDER: str = Field(
         default="anthropic",
         description="Default AI model provider abstraction",
@@ -195,6 +259,18 @@ class Settings(BaseSettings):
         ge=0.0,
         le=1.0,
         description="Default generation temperature",
+    )
+    LLM_PROVIDER: str = Field(
+        default="local_grounded",
+        description="LLM provider for grounded answering: 'local_grounded', 'anthropic', 'openai'",
+    )
+    LLM_API_KEY: str | None = Field(
+        default=None,
+        description="API key for remote LLM provider",
+    )
+    LLM_MAX_CONTEXT_TOKENS: int = Field(
+        default=4000,
+        description="Maximum token budget for retrieved evidence context",
     )
 
     @field_validator("CORS_ORIGINS", mode="before")

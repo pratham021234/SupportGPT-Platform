@@ -81,14 +81,14 @@ async def test_worker_end_to_end_pipeline(worker_test_env):
     async with session_factory() as session:
         ver_res = await session.execute(select(DocumentVersion).where(DocumentVersion.id == ver_id))
         version = ver_res.scalar_one()
-        assert version.processing_status == DocumentProcessingStatus.CHUNKED
+        assert version.processing_status == DocumentProcessingStatus.INDEXED
         assert version.chunk_count > 0
         assert version.word_count > 0
 
         doc_res = await session.execute(select(Document).where(Document.id == doc_id))
         document = doc_res.scalar_one()
         assert document.current_version_id == ver_id
-        assert document.status == DocumentProcessingStatus.CHUNKED
+        assert document.status == DocumentProcessingStatus.INDEXED
 
         chunks_res = await session.execute(
             select(DocumentChunk)
@@ -125,7 +125,7 @@ async def test_worker_prior_version_preserved_on_new_version_failure(worker_test
         doc_v1 = (await session.execute(select(Document).where(Document.id == doc_id))).scalar_one()
         assert doc_v1.current_version_id == v1_id
         assert doc_v1.current_version_number == 1
-        assert doc_v1.status == DocumentProcessingStatus.CHUNKED
+        assert doc_v1.status == DocumentProcessingStatus.INDEXED
 
     # 2. Upload v2: valid txt file header but we simulate extraction failure by creating a version that fails
     # Let's upload a blank PDF which will trigger OCR_UNAVAILABLE
@@ -155,7 +155,7 @@ async def test_worker_prior_version_preserved_on_new_version_failure(worker_test
         # CRITICAL: Document current version is still v1!
         assert doc_after.current_version_id == v1_id
         assert doc_after.current_version_number == 1
-        assert doc_after.status == DocumentProcessingStatus.CHUNKED
+        assert doc_after.status == DocumentProcessingStatus.INDEXED
         assert doc_after.error_code is None
 
 
