@@ -173,7 +173,9 @@ class TenantScopedQuery:
         result = await self.session.execute(query)
         return result.scalar_one_or_none()
 
-    async def list_knowledge_bases(self, limit: int = 50, offset: int = 0) -> Sequence[KnowledgeBase]:
+    async def list_knowledge_bases(
+        self, limit: int = 50, offset: int = 0
+    ) -> Sequence[KnowledgeBase]:
         """List knowledge bases strictly within the active organization."""
         query = (
             select(KnowledgeBase)
@@ -258,4 +260,3 @@ class TenantScopedQuery:
         )
         result = await self.session.execute(query)
         return result.scalars().all()
-

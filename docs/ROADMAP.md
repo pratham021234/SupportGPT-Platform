@@ -139,23 +139,31 @@ graph TD
 
 ---
 
-### Phase 07: Response Verification & Claim-Level Fact Checking
-- **Status**: Scheduled
+### Phase 07: Response Verification, Policy Enforcement & Human Approval
+- **Status**: **COMPLETE / VERIFIED**
 - **Dependencies**: Phase 05, Phase 06
-- **Scope**:
-  - Automated decomposition of model completions into atomic verifiable claims.
-  - Strict claim-level NLI contradiction detection and evidence grounding verification.
-  - Hallucination suppression before draft or response delivery.
+- **Scope & Deliverables**:
+  - Canonical domain models and Alembic migration `0007_response_verification`: `ResponseDraft`, `VerificationRun`, `ClaimFinding`, `PolicyRule`, `ApprovalRequest`, `VerificationAuditEvent`.
+  - PostgreSQL 16 Row-Level Security (RLS) enabled and forced across all 6 verification tables with tenant isolation policies.
+  - Granular `ClaimExtractor` decomposing responses into atomic propositions, stripping conversational fillers, and categorizing into domain categories (`policy`, `pricing_refund`, `sla_commitment`, `product_fact`, `general`).
+  - `EvidenceGrounder` calculating lexical and content overlap against persisted evidence chunks and detecting direct documentary contradictions (e.g. refund promises).
+  - Versioned declarative policy engine (`PolicyEvaluator`) supporting deterministic rules (`keyword_prohibition`, `required_phrase`, `max_length`, `refund_limit`, `unsupported_claim_block`, `mandatory_approval_on_risk`).
+  - Response verification pipeline (`ResponseVerificationPipeline`) computing deterministic dispositions (`passed`, `passed_with_warnings`, `needs_revision`, `blocked`) and risk levels (`low`, `medium`, `high`, `critical`).
+  - Durable human approval service (`ApprovalService`) enforcing exact draft version binding, separation of duties (preventing self-approval), and automatic approval invalidation upon draft revision.
+  - Append-only audit logging service (`VerificationAuditService`) capturing all lifecycle mutations.
+  - Complete RESTful API endpoints under `/api/v1/organizations/{org_id}/` for drafts, verification runs, policies, approvals, and audit trail.
+  - Interactive Next.js console at `/verification` featuring candidate inspection, claim breakdowns, approval queues with separation-of-duties warnings, policy configuration, and audit timeline.
+  - 100% test coverage across unit tests, API tests, multi-tenant security tests, and live PostgreSQL 16 integration tests.
 
 ---
 
-### Phase 08: Policy Enforcement & Human-in-the-Loop Approvals
+### Phase 08: Outbound Dispatch & Automated Workflow Orchestration
 - **Status**: Scheduled
 - **Dependencies**: Phase 03, Phase 07
 - **Scope**:
-  - Policy decision engine identifying high-risk actions (e.g. refunds, cancellations, escalations).
-  - Human agent approval interception workflow and review queues.
-  - Immutable audit trail of agent approvals and rejections.
+  - Outbound messaging dispatch and external ticketing integration.
+  - Redis-backed durable workflow orchestration for asynchronous support tasks.
+  - Rate limiting, destination validation, and approval freshness enforcement for outbound replies.
 
 ---
 

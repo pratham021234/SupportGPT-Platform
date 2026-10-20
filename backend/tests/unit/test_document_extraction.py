@@ -78,7 +78,10 @@ def test_scanned_pdf_detection_ocr_unavailable():
     blank_pdf = create_blank_pdf()
     extractor = PdfExtractor()
 
-    with pytest.raises(DocumentExtractionException, match="Optical character recognition \\(OCR\\) is not available"):
+    with pytest.raises(
+        DocumentExtractionException,
+        match="Optical character recognition \\(OCR\\) is not available",
+    ):
         extractor.extract(blank_pdf, "scanned.pdf")
 
 

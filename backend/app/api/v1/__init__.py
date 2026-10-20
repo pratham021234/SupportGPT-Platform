@@ -13,6 +13,7 @@ from app.api.v1.organizations import router as organizations_router
 from app.api.v1.sources import router as sources_router
 from app.api.v1.system import router as system_router
 from app.api.v1.tickets import router as tickets_router
+from app.api.v1.verification import router as verification_router
 from app.api.v1.webhooks import router as webhooks_router
 
 api_v1_router = APIRouter()
@@ -30,4 +31,4 @@ api_v1_router.include_router(sources_router)
 api_v1_router.include_router(ingestion_router)
 api_v1_router.include_router(ingestion_diagnostics_router)
 api_v1_router.include_router(knowledge_router)
-
+api_v1_router.include_router(verification_router)

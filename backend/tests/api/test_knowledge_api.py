@@ -213,7 +213,9 @@ async def test_document_upload_and_lifecycle(knowledge_test_context):
     assert doc_after_v2["current_version_number"] == 1
 
     # 5. Reprocess Version
-    res_reprocess = await client.post(f"/api/v1/organizations/{org.id}/documents/{doc_id}/reprocess")
+    res_reprocess = await client.post(
+        f"/api/v1/organizations/{org.id}/documents/{doc_id}/reprocess"
+    )
     assert res_reprocess.status_code == 200
     assert res_reprocess.json()["processing_status"] == "queued"
 

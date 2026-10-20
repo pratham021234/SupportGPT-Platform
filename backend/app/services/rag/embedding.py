@@ -198,9 +198,7 @@ class OpenAIEmbeddingProvider(BaseEmbeddingProvider):
         except Exception as exc:
             if isinstance(exc, (EmbeddingGenerationException, VectorDimensionMismatchException)):
                 raise
-            raise EmbeddingGenerationException(
-                f"OpenAI embedding request failed: {exc}"
-            ) from exc
+            raise EmbeddingGenerationException(f"OpenAI embedding request failed: {exc}") from exc
 
     async def embed_query(self, query: str) -> list[float]:
         vectors = await self.embed_texts([query])

@@ -56,7 +56,9 @@ router = APIRouter(prefix="/organizations/{organization_id}", tags=["Knowledge B
 )
 async def create_knowledge_base(
     payload: KnowledgeBaseCreate,
-    context: Annotated[OrganizationContext, Depends(require_permission(Permission.KNOWLEDGE_WRITE))],
+    context: Annotated[
+        OrganizationContext, Depends(require_permission(Permission.KNOWLEDGE_WRITE))
+    ],
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> KnowledgeBaseResponse:
     service = DocumentService(db)
@@ -126,7 +128,9 @@ async def get_knowledge_base(
 )
 async def upload_document(
     knowledge_base_id: Annotated[uuid.UUID, Path(..., description="Target knowledge base ID")],
-    context: Annotated[OrganizationContext, Depends(require_permission(Permission.KNOWLEDGE_WRITE))],
+    context: Annotated[
+        OrganizationContext, Depends(require_permission(Permission.KNOWLEDGE_WRITE))
+    ],
     db: Annotated[AsyncSession, Depends(get_db_session)],
     file: UploadFile = File(..., description="Document binary file (PDF, DOCX, TXT, or Markdown)"),
     title: str | None = Form(default=None, description="Optional document display title"),
@@ -247,7 +251,9 @@ async def list_document_versions(
 )
 async def upload_new_version(
     document_id: Annotated[uuid.UUID, Path(..., description="Target document ID")],
-    context: Annotated[OrganizationContext, Depends(require_permission(Permission.KNOWLEDGE_WRITE))],
+    context: Annotated[
+        OrganizationContext, Depends(require_permission(Permission.KNOWLEDGE_WRITE))
+    ],
     db: Annotated[AsyncSession, Depends(get_db_session)],
     file: UploadFile = File(..., description="New version document binary file"),
 ) -> DocumentVersionResponse:
@@ -272,9 +278,13 @@ async def upload_new_version(
 )
 async def reprocess_document(
     document_id: Annotated[uuid.UUID, Path(..., description="Target document ID")],
-    context: Annotated[OrganizationContext, Depends(require_permission(Permission.KNOWLEDGE_WRITE))],
+    context: Annotated[
+        OrganizationContext, Depends(require_permission(Permission.KNOWLEDGE_WRITE))
+    ],
     db: Annotated[AsyncSession, Depends(get_db_session)],
-    version_id: uuid.UUID | None = Query(default=None, description="Optional specific version ID to reprocess"),
+    version_id: uuid.UUID | None = Query(
+        default=None, description="Optional specific version ID to reprocess"
+    ),
 ) -> DocumentVersionResponse:
     service = DocumentService(db)
     ver = await service.reprocess_document(
@@ -294,7 +304,9 @@ async def reprocess_document(
 )
 async def delete_document(
     document_id: Annotated[uuid.UUID, Path(..., description="Target document ID")],
-    context: Annotated[OrganizationContext, Depends(require_permission(Permission.KNOWLEDGE_MANAGE))],
+    context: Annotated[
+        OrganizationContext, Depends(require_permission(Permission.KNOWLEDGE_MANAGE))
+    ],
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> DocumentResponse:
     service = DocumentService(db)
@@ -495,4 +507,3 @@ async def answer_organization_knowledge(
         generation_latency_ms=result.generation_latency_ms,
         total_latency_ms=result.total_latency_ms,
     )
-

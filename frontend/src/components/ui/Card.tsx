@@ -26,13 +26,28 @@ export function CardHeader({
   title,
   subtitle,
   action,
+  children,
   className,
 }: {
-  title: React.ReactNode;
+  title?: React.ReactNode;
   subtitle?: React.ReactNode;
   action?: React.ReactNode;
+  children?: React.ReactNode;
   className?: string;
 }) {
+  if (children) {
+    return (
+      <div
+        className={clsx(
+          "flex items-start justify-between gap-4 pb-4 border-b border-slate-800/80",
+          className
+        )}
+      >
+        {children}
+      </div>
+    );
+  }
+
   return (
     <div
       className={clsx(
@@ -41,7 +56,7 @@ export function CardHeader({
       )}
     >
       <div>
-        <h3 className="text-base font-semibold text-slate-100">{title}</h3>
+        {title && <h3 className="text-base font-semibold text-slate-100">{title}</h3>}
         {subtitle && (
           <p className="text-sm text-slate-400 mt-0.5">{subtitle}</p>
         )}

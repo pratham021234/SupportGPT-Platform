@@ -68,7 +68,11 @@ class HierarchicalStructuralChunker:
             # Flush current chunk when encountering a new heading if we already have content
             if is_heading and current_content_parts:
                 chunk_text = "\n\n".join(current_content_parts)
-                chunks.append(self._create_chunk(seq, chunk_text, current_start_idx, current_end_idx, current_headings))
+                chunks.append(
+                    self._create_chunk(
+                        seq, chunk_text, current_start_idx, current_end_idx, current_headings
+                    )
+                )
                 seq += 1
                 current_content_parts = []
                 current_start_idx = -1
@@ -77,7 +81,11 @@ class HierarchicalStructuralChunker:
                 current_start_idx = b_start
                 current_headings = list(headings)
 
-            potential_text = "\n\n".join(current_content_parts + [block_text]) if current_content_parts else block_text
+            potential_text = (
+                "\n\n".join(current_content_parts + [block_text])
+                if current_content_parts
+                else block_text
+            )
 
             if len(potential_text) <= self.chunk_size:
                 current_content_parts.append(block_text)
@@ -86,7 +94,11 @@ class HierarchicalStructuralChunker:
                 # Need to flush existing chunk if we have content
                 if current_content_parts:
                     chunk_text = "\n\n".join(current_content_parts)
-                    chunks.append(self._create_chunk(seq, chunk_text, current_start_idx, current_end_idx, current_headings))
+                    chunks.append(
+                        self._create_chunk(
+                            seq, chunk_text, current_start_idx, current_end_idx, current_headings
+                        )
+                    )
                     seq += 1
 
                     # Setup overlap from previous chunk
@@ -233,7 +245,11 @@ class HierarchicalStructuralChunker:
                     for i in range(0, len(s), self.chunk_size - self.chunk_overlap):
                         part = s[i : i + self.chunk_size].strip()
                         if part:
-                            chunks.append(self._create_chunk(seq, part, cursor + i, cursor + i + len(part), headings))
+                            chunks.append(
+                                self._create_chunk(
+                                    seq, part, cursor + i, cursor + i + len(part), headings
+                                )
+                            )
                             seq += 1
                     cursor += len(s)
                 else:
@@ -241,6 +257,8 @@ class HierarchicalStructuralChunker:
 
         if current_sentences:
             final_text = " ".join(current_sentences)
-            chunks.append(self._create_chunk(seq, final_text, cursor, cursor + len(final_text), headings))
+            chunks.append(
+                self._create_chunk(seq, final_text, cursor, cursor + len(final_text), headings)
+            )
 
         return chunks

@@ -84,14 +84,12 @@ class DocumentWorker:
                 if ver.attempt_count >= self.settings.DOCUMENT_PROCESSING_MAX_ATTEMPTS:
                     ver.processing_status = DocumentProcessingStatus.FAILED
                     ver.error_code = "LEASE_TIMEOUT_EXCEEDED"
-                    ver.error_summary = (
-                        f"Processing lease abandoned and exceeded maximum attempts ({self.settings.DOCUMENT_PROCESSING_MAX_ATTEMPTS})."
-                    )
+                    ver.error_summary = f"Processing lease abandoned and exceeded maximum attempts ({self.settings.DOCUMENT_PROCESSING_MAX_ATTEMPTS})."
                     ver.locked_by = None
                     ver.processing_started_at = None
                 else:
                     ver.processing_status = DocumentProcessingStatus.RETRY_WAIT
-                    backoff_delay = 2 ** ver.attempt_count * 5
+                    backoff_delay = 2**ver.attempt_count * 5
                     ver.next_attempt_at = now + timedelta(seconds=backoff_delay)
                     ver.locked_by = None
                     ver.processing_started_at = None
@@ -165,7 +163,11 @@ class DocumentWorker:
             doc_query = select(Document).where(Document.id == version.document_id)
             document = (await session.execute(doc_query)).scalar_one_or_none()
             if not document:
-                logger.error("Parent document %s not found for version %s.", str(version.document_id), str(version_id))
+                logger.error(
+                    "Parent document %s not found for version %s.",
+                    str(version.document_id),
+                    str(version_id),
+                )
                 version.processing_status = DocumentProcessingStatus.FAILED
                 version.error_code = "PARENT_DOCUMENT_NOT_FOUND"
                 version.error_summary = "Parent document record could not be located."
@@ -299,7 +301,7 @@ class DocumentWorker:
                     version.error_summary = f"Exceeded maximum attempts ({self.settings.DOCUMENT_PROCESSING_MAX_ATTEMPTS}): {str(exc)[:400]}"
                 else:
                     version.processing_status = DocumentProcessingStatus.RETRY_WAIT
-                    backoff = 2 ** version.attempt_count * 5
+                    backoff = 2**version.attempt_count * 5
                     version.next_attempt_at = now + timedelta(seconds=backoff)
 
                 version.locked_by = None

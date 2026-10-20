@@ -145,7 +145,9 @@ class RAGEvaluator:
                     or test_case.expected_source_title.lower() in ev.source_title.lower()
                 )
                 keywords_found = sum(
-                    1 for kw in test_case.expected_content_keywords if kw.lower() in ev.relevant_excerpt.lower()
+                    1
+                    for kw in test_case.expected_content_keywords
+                    if kw.lower() in ev.relevant_excerpt.lower()
                 )
                 if title_matches and keywords_found >= 1:
                     hit_rank = ev.retrieval_rank
@@ -164,12 +166,14 @@ class RAGEvaluator:
                 valid_citations += 1
 
         citation_validity = (
-            (valid_citations / total_citations) if total_citations > 0 else (1.0 if not test_case.expected_abstention else 1.0)
+            (valid_citations / total_citations)
+            if total_citations > 0
+            else (1.0 if not test_case.expected_abstention else 1.0)
         )
 
         # Evaluate abstention accuracy
         abstained = answer_result.abstention_status
-        abstention_accurate = (abstained == test_case.expected_abstention)
+        abstention_accurate = abstained == test_case.expected_abstention
 
         return EvalCaseResult(
             test_id=test_case.test_id,
@@ -209,12 +213,8 @@ class RAGEvaluator:
         mean_mrr = (
             sum(r.reciprocal_rank for r in answerable) / len(answerable) if answerable else 0.0
         )
-        citation_validity = (
-            sum(r.citation_validity for r in case_results) / len(case_results)
-        )
-        abstention_acc = (
-            sum(1.0 for r in case_results if r.abstention_accurate) / len(case_results)
-        )
+        citation_validity = sum(r.citation_validity for r in case_results) / len(case_results)
+        abstention_acc = sum(1.0 for r in case_results if r.abstention_accurate) / len(case_results)
 
         return EvaluationReport(
             embedding_provider=self.embedding_provider,

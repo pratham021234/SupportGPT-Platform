@@ -261,4 +261,168 @@ export interface KnowledgeAnswerResponse {
   total_latency_ms: number;
 }
 
+// ============================================================================
+// Phase 07: Response Verification, Policy Enforcement & Human Approval
+// ============================================================================
+
+export type DraftLifecycleStatus =
+  | 'draft'
+  | 'verification_pending'
+  | 'verified'
+  | 'verification_failed'
+  | 'approval_pending'
+  | 'approved'
+  | 'revision_required'
+  | 'rejected'
+  | 'superseded';
+
+export type VerificationStatus =
+  | 'passed'
+  | 'passed_with_warnings'
+  | 'needs_revision'
+  | 'blocked'
+  | 'failed';
+
+export type RiskLevel = 'low' | 'medium' | 'high' | 'critical';
+
+export type ClaimCategory =
+  | 'policy'
+  | 'pricing_refund'
+  | 'sla_commitment'
+  | 'product_fact'
+  | 'general';
+
+export type ClaimSupportStatus =
+  | 'supported'
+  | 'partially_supported'
+  | 'unsupported'
+  | 'contradicted'
+  | 'not_verifiable';
+
+export type ClaimVerificationMethod =
+  | 'evidence_grounding'
+  | 'deterministic_rule'
+  | 'model_assisted';
+
+export type PolicyCategory =
+  | 'factual_accuracy'
+  | 'evidence_citations'
+  | 'sensitive_data'
+  | 'restricted_commitments'
+  | 'refund_compensation'
+  | 'escalation_required'
+  | 'required_disclaimers'
+  | 'prohibited_terms'
+  | 'approval_thresholds';
+
+export type PolicyRuleType =
+  | 'unsupported_claim_block'
+  | 'keyword_prohibition'
+  | 'required_phrase'
+  | 'max_length'
+  | 'refund_limit'
+  | 'mandatory_approval_on_risk';
+
+export type PolicySeverity = 'low' | 'medium' | 'high' | 'critical';
+
+export type ApprovalStatus =
+  | 'pending'
+  | 'approved'
+  | 'rejected'
+  | 'revision_requested'
+  | 'invalidated'
+  | 'cancelled';
+
+export interface ResponseDraft {
+  id: string;
+  organization_id: string;
+  ticket_id?: string | null;
+  conversation_id?: string | null;
+  original_query: string;
+  draft_text: string;
+  version_number: number;
+  lifecycle_status: DraftLifecycleStatus;
+  evidence_references: Array<{
+    chunk_id?: string;
+    excerpt?: string;
+    source_title?: string;
+    [key: string]: unknown;
+  }>;
+  created_by_user_id?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ClaimFinding {
+  id: string;
+  claim_text: string;
+  claim_category: ClaimCategory;
+  support_status: ClaimSupportStatus;
+  evidence_chunk_ids: string[];
+  confidence_score?: number | null;
+  reason: string;
+  verification_method: ClaimVerificationMethod;
+}
+
+export interface VerificationRun {
+  id: string;
+  draft_id: string;
+  draft_version: number;
+  verification_pipeline_version: string;
+  policy_set_version: number;
+  status: VerificationStatus;
+  risk_level: RiskLevel;
+  requires_human_approval: boolean;
+  machine_readable_findings: Record<string, unknown>;
+  claim_findings: ClaimFinding[];
+  evidence_references: unknown[];
+  started_at: string;
+  completed_at?: string | null;
+  execution_time_ms: number;
+  error_message?: string | null;
+}
+
+export interface PolicyRule {
+  id: string;
+  name: string;
+  description?: string | null;
+  policy_category: PolicyCategory;
+  severity: PolicySeverity;
+  rule_type: PolicyRuleType;
+  rule_config: Record<string, unknown>;
+  is_enabled: boolean;
+  version_number: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ApprovalRequest {
+  id: string;
+  draft_id: string;
+  draft_version: number;
+  verification_run_id: string;
+  status: ApprovalStatus;
+  required_role: string;
+  separation_of_duties: boolean;
+  assigned_to_user_id?: string | null;
+  requested_by_user_id?: string | null;
+  decision_by_user_id?: string | null;
+  decision_reason?: string | null;
+  decided_at?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface VerificationAuditEvent {
+  id: string;
+  event_type: string;
+  entity_type: string;
+  entity_id: string;
+  actor_id?: string | null;
+  request_id?: string | null;
+  event_summary: string;
+  metadata_json: Record<string, unknown>;
+  created_at: string;
+}
+
 

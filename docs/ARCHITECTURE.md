@@ -444,12 +444,75 @@ Deterministic metrics measured against labeled test queries:
 
 ---
 
-## 11. Known Limitations & Deferred Work
-1. **Optical Character Recognition (OCR)**: Scanned PDFs and image-only documents are flagged as `OCR_UNAVAILABLE`; OCR engine integration (e.g. Tesseract) is deferred.
+## 11. AI Response Verification, Policy Enforcement & Human Approval (Phase 07)
+
+SupportGPT AI provides a deterministic verification pipeline, declarative versioned policy engine, and durable human approval workflow to prevent ungrounded, contradicted, or policy-violating AI-generated customer-support responses from being delivered.
+
+```mermaid
+graph TD
+    Draft["ResponseDraft (vN)"] --> Pipeline["ResponseVerificationPipeline"]
+    
+    subgraph Verification ["Deterministic Verification Layer"]
+        Extractor["ClaimExtractor (Filter Conversational Fillers)"]
+        Grounder["EvidenceGrounder (Lexical Overlap & Contradiction Detection)"]
+        Policies["PolicyEvaluator (Deterministic Versioned Rules)"]
+        
+        Pipeline --> Extractor
+        Extractor --> Grounder
+        Pipeline --> Policies
+    end
+    
+    Grounder --> Findings["ClaimFindings (Supported / Unsupported / Contradicted)"]
+    Policies --> PolFindings["PolicyEvaluationFindings"]
+    
+    Findings --> Disp["Disposition & Risk Engine"]
+    PolFindings --> Disp
+    
+    Disp --> Run["Persisted VerificationRun"]
+    Run --> Decision{"Requires Human Approval?"}
+    
+    Decision -->|Yes| ApprReq["ApprovalRequest (Role Bound, Separation of Duties)"]
+    Decision -->|No & Passed| Verified["Draft Verified"]
+    
+    ApprReq --> Human["Authenticated Team Member Decision"]
+    Human -->|Approve| Approved["Draft Approved"]
+    Human -->|Reject| Rejected["Draft Rejected"]
+    Human -->|Revise| Revised["Draft Revise -> Increments vN+1 & Invalidates Prior Approvals"]
+    
+    Revised --> Audit["Append-Only VerificationAuditEvent"]
+    Approved --> Audit
+    Rejected --> Audit
+    Run --> Audit
+```
+
+### 11.1 Canonical Verification Data Model
+- **`ResponseDraft` (`response_drafts`)**: Represents an AI-generated customer response candidate. Versioned with `version_number` and tracked through `lifecycle_status`.
+- **`VerificationRun` (`verification_runs`)**: Execution record of the verification pipeline for a specific draft version, policy-set version, risk level, and structured machine-readable findings.
+- **`ClaimFinding` (`claim_findings`)**: Granular claim record with category, support status (`supported`, `partially_supported`, `unsupported`, `contradicted`, `not_verifiable`), confidence score, and documentary reason.
+- **`PolicyRule` (`policy_rules`)**: Declarative organizational safety rules (`keyword_prohibition`, `required_phrase`, `max_length`, `refund_limit`, `unsupported_claim_block`, `mandatory_approval_on_risk`) with severity and active status.
+- **`ApprovalRequest` (`approval_requests`)**: Human approval workflow bound to exact draft version and verification run. Enforces required role and separation of duties.
+- **`VerificationAuditEvent` (`verification_audit_events`)**: Append-only log recording every lifecycle mutation, revision, approval, rejection, and invalidation.
+
+### 11.2 Verification Pipeline & Disposition Rules
+- **Contradiction Detection**: Explicitly identifies documentary contradictions (e.g. promising 100% unconditional refund when policy specifies non-refundable) &rarr; `BLOCKED` status, `CRITICAL` risk, mandatory approval.
+- **Unsupported Claims**: Detects material factual assertions lacking matching evidence &rarr; `NEEDS_REVISION` status, `HIGH` risk, mandatory approval.
+- **Policy Violations**: Critical policy failures block response; high-severity failures require revision; medium failures pass with warnings.
+- **Fully Grounded**: All claims corroborated by authorized evidence with zero policy violations &rarr; `PASSED` status, `LOW` risk.
+
+### 11.3 Separation of Duties & Exact Version Binding
+- **Separation of Duties**: Server-side invariant prevents the author or requester of a draft from self-approving (`SelfApprovalForbiddenException`, HTTP 403).
+- **Exact Version Binding**: Approval decisions must match `draft.version_number == req.draft_version`. Attempting to approve a stale version raises `StaleDraftApprovalException` (HTTP 409).
+- **Draft Revisions**: Updating a draft increments version to `vN+1` and transactionally marks all prior pending/approved approval requests as `INVALIDATED`.
+
+---
+
+## 12. Known Limitations & Deferred Work
+1. **Optical Character Recognition (OCR)**: Scanned PDFs and image-only documents are flagged as `OCR_UNAVAILABLE`; OCR engine integration is deferred.
 2. **Multi-Node Cloud Object Storage**: S3/GCS-compatible object storage adapters are deferred; local filesystem storage is active for single-node deployments.
-3. **Response Verification & Claim-Level Fact Checking**: Claim decomposition, contradiction detection, and policy enforcement are deferred to Phase 07.
-4. **Human Approval Workflows**: Human-in-the-loop review queues and draft escalation are deferred to Phase 08.
-5. **Autonomous Customer Replies**: Automated sending of customer replies is strictly prohibited in Phase 06.
+3. **Automated Outbound Dispatch**: Automatic sending of customer emails, tickets, or messages is strictly prohibited in Phase 07.
+4. **Autonomous External Actions**: Refund issuance, account mutations, payment changes, and external ticketing writes remain strictly out of scope.
+5. **Model Calibration**: Confidence scores reflect heuristic lexical overlap metrics rather than empirically calibrated probabilities.
+
 
 
 

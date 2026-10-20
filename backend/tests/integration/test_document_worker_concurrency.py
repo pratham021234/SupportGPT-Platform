@@ -29,7 +29,9 @@ async def worker_test_env():
     session_factory = async_sessionmaker(bind=engine, class_=AsyncSession, expire_on_commit=False)
 
     async with session_factory() as session:
-        org = Organization(name="Worker Test Org", slug="worker-test-org", status=OrganizationStatus.ACTIVE)
+        org = Organization(
+            name="Worker Test Org", slug="worker-test-org", status=OrganizationStatus.ACTIVE
+        )
         session.add(org)
         await session.flush()
 
@@ -130,6 +132,7 @@ async def test_worker_prior_version_preserved_on_new_version_failure(worker_test
     # 2. Upload v2: valid txt file header but we simulate extraction failure by creating a version that fails
     # Let's upload a blank PDF which will trigger OCR_UNAVAILABLE
     from tests.unit.test_document_extraction import create_blank_pdf
+
     blank_pdf = create_blank_pdf()
 
     async with session_factory() as session:
@@ -147,11 +150,15 @@ async def test_worker_prior_version_preserved_on_new_version_failure(worker_test
 
     # 4. Check that v2 is FAILED, but parent Document still cleanly points to v1!
     async with session_factory() as session:
-        v2_res = (await session.execute(select(DocumentVersion).where(DocumentVersion.id == v2_id))).scalar_one()
+        v2_res = (
+            await session.execute(select(DocumentVersion).where(DocumentVersion.id == v2_id))
+        ).scalar_one()
         assert v2_res.processing_status == DocumentProcessingStatus.FAILED
         assert v2_res.error_code == "EXTRACTION_FAILED"
 
-        doc_after = (await session.execute(select(Document).where(Document.id == doc_id))).scalar_one()
+        doc_after = (
+            await session.execute(select(Document).where(Document.id == doc_id))
+        ).scalar_one()
         # CRITICAL: Document current version is still v1!
         assert doc_after.current_version_id == v1_id
         assert doc_after.current_version_number == 1
@@ -209,7 +216,9 @@ async def test_worker_abandoned_lease_reclamation(worker_test_env):
     assert reclaimed == 1
 
     async with session_factory() as session:
-        reclaimed_ver = (await session.execute(select(DocumentVersion).where(DocumentVersion.id == ver_id))).scalar_one()
+        reclaimed_ver = (
+            await session.execute(select(DocumentVersion).where(DocumentVersion.id == ver_id))
+        ).scalar_one()
         assert reclaimed_ver.processing_status == DocumentProcessingStatus.RETRY_WAIT
         assert reclaimed_ver.attempt_count == 1
         assert reclaimed_ver.locked_by is None

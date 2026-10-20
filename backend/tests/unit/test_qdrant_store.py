@@ -134,11 +134,13 @@ def test_qdrant_deletion_by_version_and_document():
     c2 = FakeChunk(uuid.uuid4(), org_id, kb_id, doc_id, ver_1, seq=2)
     c3 = FakeChunk(uuid.uuid4(), org_id, kb_id, doc_id, ver_2, seq=1)
 
-    manager.upsert_chunks([
-        (c1, [0.1, 0.2, 0.3, 0.4]),
-        (c2, [0.2, 0.3, 0.4, 0.5]),
-        (c3, [0.3, 0.4, 0.5, 0.6]),
-    ])
+    manager.upsert_chunks(
+        [
+            (c1, [0.1, 0.2, 0.3, 0.4]),
+            (c2, [0.2, 0.3, 0.4, 0.5]),
+            (c3, [0.3, 0.4, 0.5, 0.6]),
+        ]
+    )
 
     # Delete ver_1 points
     manager.delete_by_version_id(ver_1)

@@ -1,6 +1,5 @@
 """Unit tests for deterministic text normalizer and hierarchical structural chunker."""
 
-
 from app.services.chunking.chunker import HierarchicalStructuralChunker
 from app.services.chunking.normalizer import TextNormalizer
 

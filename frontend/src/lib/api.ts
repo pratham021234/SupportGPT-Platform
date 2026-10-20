@@ -19,6 +19,11 @@ import type {
   KnowledgeBaseListResponse,
   KnowledgeSearchResponse,
   KnowledgeAnswerResponse,
+  ResponseDraft,
+  VerificationRun,
+  PolicyRule,
+  ApprovalRequest,
+  VerificationAuditEvent,
 } from "../types/api";
 
 export class ApiError extends Error {
@@ -258,6 +263,155 @@ export const apiClient = {
       method: "POST",
       body: JSON.stringify({ question, top_k: topK, min_score: minScore }),
     });
+  },
+
+  /**
+   * List response drafts for an organization
+   */
+  async listDrafts(orgId: string, ticketId?: string): Promise<{ items: ResponseDraft[]; total: number }> {
+    const qs = ticketId ? `?ticket_id=${ticketId}` : "";
+    return typedFetch<{ items: ResponseDraft[]; total: number }>(`/api/v1/organizations/${orgId}/drafts${qs}`);
+  },
+
+  /**
+   * Create a response draft
+   */
+  async createDraft(
+    orgId: string,
+    payload: {
+      original_query: string;
+      draft_text: string;
+      ticket_id?: string | null;
+      conversation_id?: string | null;
+      evidence_references?: Array<Record<string, unknown>>;
+    }
+  ): Promise<ResponseDraft> {
+    return typedFetch<ResponseDraft>(`/api/v1/organizations/${orgId}/drafts`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  /**
+   * Revise an existing response draft (increments version and invalidates approvals)
+   */
+  async reviseDraft(
+    orgId: string,
+    draftId: string,
+    payload: {
+      draft_text: string;
+      evidence_references?: Array<Record<string, unknown>>;
+    }
+  ): Promise<ResponseDraft> {
+    return typedFetch<ResponseDraft>(`/api/v1/organizations/${orgId}/drafts/${draftId}`, {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  /**
+   * Run verification pipeline against a draft
+   */
+  async verifyDraft(orgId: string, draftId: string): Promise<VerificationRun> {
+    return typedFetch<VerificationRun>(`/api/v1/organizations/${orgId}/drafts/${draftId}/verify`, {
+      method: "POST",
+    });
+  },
+
+  /**
+   * Retrieve a specific verification run
+   */
+  async getVerificationRun(orgId: string, runId: string): Promise<VerificationRun> {
+    return typedFetch<VerificationRun>(`/api/v1/organizations/${orgId}/verification-runs/${runId}`);
+  },
+
+  /**
+   * List organizational policy rules
+   */
+  async listPolicies(orgId: string): Promise<{ items: PolicyRule[]; total: number }> {
+    return typedFetch<{ items: PolicyRule[]; total: number }>(`/api/v1/organizations/${orgId}/policies`);
+  },
+
+  /**
+   * Create a new policy rule
+   */
+  async createPolicy(
+    orgId: string,
+    payload: {
+      name: string;
+      description?: string;
+      policy_category: string;
+      severity: string;
+      rule_type: string;
+      rule_config: Record<string, unknown>;
+      is_enabled?: boolean;
+    }
+  ): Promise<PolicyRule> {
+    return typedFetch<PolicyRule>(`/api/v1/organizations/${orgId}/policies`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  /**
+   * Toggle a policy rule enabled/disabled
+   */
+  async togglePolicy(orgId: string, policyId: string): Promise<PolicyRule> {
+    return typedFetch<PolicyRule>(`/api/v1/organizations/${orgId}/policies/${policyId}/toggle`, {
+      method: "PATCH",
+    });
+  },
+
+  /**
+   * List human approval requests
+   */
+  async listApprovals(orgId: string, status?: string): Promise<{ items: ApprovalRequest[]; total: number }> {
+    const qs = status ? `?status=${status}` : "";
+    return typedFetch<{ items: ApprovalRequest[]; total: number }>(`/api/v1/organizations/${orgId}/approvals${qs}`);
+  },
+
+  /**
+   * Submit draft for human approval
+   */
+  async createApprovalRequest(
+    orgId: string,
+    draftId: string,
+    payload: {
+      draft_version: number;
+      verification_run_id: string;
+      required_role?: string;
+      separation_of_duties?: boolean;
+    }
+  ): Promise<ApprovalRequest> {
+    return typedFetch<ApprovalRequest>(`/api/v1/organizations/${orgId}/drafts/${draftId}/approvals`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  /**
+   * Submit human approval decision
+   */
+  async decideApproval(
+    orgId: string,
+    approvalId: string,
+    payload: {
+      decision: "approve" | "reject" | "request_revision";
+      reason?: string;
+    }
+  ): Promise<ApprovalRequest> {
+    return typedFetch<ApprovalRequest>(`/api/v1/organizations/${orgId}/approvals/${approvalId}/decision`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  /**
+   * Query append-only audit trail
+   */
+  async listAuditTrail(orgId: string, entityType?: string): Promise<{ items: VerificationAuditEvent[]; total: number }> {
+    const qs = entityType ? `?entity_type=${entityType}` : "";
+    return typedFetch<{ items: VerificationAuditEvent[]; total: number }>(`/api/v1/organizations/${orgId}/verification-audit${qs}`);
   },
 };
 

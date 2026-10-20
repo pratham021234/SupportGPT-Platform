@@ -39,7 +39,9 @@ class LocalStorageBackend(StorageBackend):
             or ":" in storage_key
             or Path(storage_key).is_absolute()
         ):
-            raise PathTraversalException("Access denied: absolute or root-relative path traversal detected.")
+            raise PathTraversalException(
+                "Access denied: absolute or root-relative path traversal detected."
+            )
 
         parts = Path(storage_key).parts
         if ".." in parts:
@@ -115,7 +117,9 @@ class LocalStorageBackend(StorageBackend):
                     tmp_path.unlink()
                 except OSError:
                     pass
-            if isinstance(exc, (PayloadSizeLimitException, PathTraversalException, StorageException)):
+            if isinstance(
+                exc, (PayloadSizeLimitException, PathTraversalException, StorageException)
+            ):
                 raise
             logger.error("Failed to store object: %s", str(exc))
             raise StorageException("Unable to persist document asset.") from exc

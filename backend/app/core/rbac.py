@@ -32,6 +32,12 @@ class Permission(StrEnum):
     KNOWLEDGE_WRITE = "knowledge:write"
     KNOWLEDGE_MANAGE = "knowledge:manage"
 
+    # Response Verification, Policy & Human Approval (Phase 07)
+    VERIFICATION_READ = "verification:read"
+    VERIFICATION_WRITE = "verification:write"
+    VERIFICATION_APPROVE = "verification:approve"
+    POLICIES_MANAGE = "policies:manage"
+
 
 # Explicit Role-Permission Matrix (Least Privilege)
 ROLE_PERMISSIONS: dict[MembershipRole, set[Permission]] = {
@@ -52,6 +58,10 @@ ROLE_PERMISSIONS: dict[MembershipRole, set[Permission]] = {
         Permission.KNOWLEDGE_READ,
         Permission.KNOWLEDGE_WRITE,
         Permission.KNOWLEDGE_MANAGE,
+        Permission.VERIFICATION_READ,
+        Permission.VERIFICATION_WRITE,
+        Permission.VERIFICATION_APPROVE,
+        Permission.POLICIES_MANAGE,
     },
     MembershipRole.ADMIN: {
         Permission.ORG_READ,
@@ -70,6 +80,10 @@ ROLE_PERMISSIONS: dict[MembershipRole, set[Permission]] = {
         Permission.KNOWLEDGE_READ,
         Permission.KNOWLEDGE_WRITE,
         Permission.KNOWLEDGE_MANAGE,
+        Permission.VERIFICATION_READ,
+        Permission.VERIFICATION_WRITE,
+        Permission.VERIFICATION_APPROVE,
+        Permission.POLICIES_MANAGE,
     },
     MembershipRole.AGENT: {
         Permission.ORG_READ,
@@ -82,12 +96,16 @@ ROLE_PERMISSIONS: dict[MembershipRole, set[Permission]] = {
         Permission.INGESTION_READ,
         Permission.KNOWLEDGE_READ,
         Permission.KNOWLEDGE_WRITE,
+        Permission.VERIFICATION_READ,
+        Permission.VERIFICATION_WRITE,
+        Permission.VERIFICATION_APPROVE,
     },
     MembershipRole.VIEWER: {
         Permission.ORG_READ,
         Permission.TICKETS_READ,
         Permission.CUSTOMERS_READ,
         Permission.KNOWLEDGE_READ,
+        Permission.VERIFICATION_READ,
     },
 }
 

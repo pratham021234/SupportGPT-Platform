@@ -39,8 +39,19 @@ def multi_tenant_qdrant_manager():
 
 
 @pytest.fixture
-async def multi_tenant_rag_context(multi_tenant_qdrant_manager) -> AsyncIterator[
-    tuple[AsyncClient, async_sessionmaker[AsyncSession], Organization, Organization, User, User, DocumentWorker, QdrantStoreManager]
+async def multi_tenant_rag_context(
+    multi_tenant_qdrant_manager,
+) -> AsyncIterator[
+    tuple[
+        AsyncClient,
+        async_sessionmaker[AsyncSession],
+        Organization,
+        Organization,
+        User,
+        User,
+        DocumentWorker,
+        QdrantStoreManager,
+    ]
 ]:
     """Test fixture with two completely disjoint organizations (Alpha and Beta)."""
     engine = create_async_engine("sqlite+aiosqlite:///:memory:", echo=False)
@@ -65,24 +76,44 @@ async def multi_tenant_rag_context(multi_tenant_qdrant_manager) -> AsyncIterator
     pwd = hash_password("Secret123!Safe")
     async with session_factory() as db:
         # Organization Alpha
-        org_alpha = Organization(name="Alpha Corp", slug="alpha-corp", status=OrganizationStatus.ACTIVE)
+        org_alpha = Organization(
+            name="Alpha Corp", slug="alpha-corp", status=OrganizationStatus.ACTIVE
+        )
         # Organization Beta
-        org_beta = Organization(name="Beta Corp", slug="beta-corp", status=OrganizationStatus.ACTIVE)
+        org_beta = Organization(
+            name="Beta Corp", slug="beta-corp", status=OrganizationStatus.ACTIVE
+        )
         db.add_all([org_alpha, org_beta])
         await db.flush()
 
         # Users
-        user_alpha = User(email="alice@alpha.com", password_hash=pwd, display_name="Alice Alpha", status=UserStatus.ACTIVE)
-        user_beta = User(email="bob@beta.com", password_hash=pwd, display_name="Bob Beta", status=UserStatus.ACTIVE)
+        user_alpha = User(
+            email="alice@alpha.com",
+            password_hash=pwd,
+            display_name="Alice Alpha",
+            status=UserStatus.ACTIVE,
+        )
+        user_beta = User(
+            email="bob@beta.com",
+            password_hash=pwd,
+            display_name="Bob Beta",
+            status=UserStatus.ACTIVE,
+        )
         db.add_all([user_alpha, user_beta])
         await db.flush()
 
         # Memberships
         mem_alpha = OrganizationMembership(
-            organization_id=org_alpha.id, user_id=user_alpha.id, role=MembershipRole.ADMIN, status=MembershipStatus.ACTIVE
+            organization_id=org_alpha.id,
+            user_id=user_alpha.id,
+            role=MembershipRole.ADMIN,
+            status=MembershipStatus.ACTIVE,
         )
         mem_beta = OrganizationMembership(
-            organization_id=org_beta.id, user_id=user_beta.id, role=MembershipRole.ADMIN, status=MembershipStatus.ACTIVE
+            organization_id=org_beta.id,
+            user_id=user_beta.id,
+            role=MembershipRole.ADMIN,
+            status=MembershipStatus.ACTIVE,
         )
         db.add_all([mem_alpha, mem_beta])
         await db.commit()
@@ -96,7 +127,16 @@ async def multi_tenant_rag_context(multi_tenant_qdrant_manager) -> AsyncIterator
 
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://testserver") as client:
-        yield client, session_factory, org_alpha, org_beta, user_alpha, user_beta, worker, multi_tenant_qdrant_manager
+        yield (
+            client,
+            session_factory,
+            org_alpha,
+            org_beta,
+            user_alpha,
+            user_beta,
+            worker,
+            multi_tenant_qdrant_manager,
+        )
 
     app.dependency_overrides.clear()
     await engine.dispose()
@@ -105,10 +145,14 @@ async def multi_tenant_rag_context(multi_tenant_qdrant_manager) -> AsyncIterator
 @pytest.mark.asyncio
 async def test_cross_tenant_knowledge_base_search_denied(multi_tenant_rag_context):
     """Verify an authenticated user from Organization Alpha cannot search Organization Beta's knowledge base."""
-    client, session_factory, org_alpha, org_beta, user_alpha, user_beta, worker, qdrant_store = multi_tenant_rag_context
+    client, session_factory, org_alpha, org_beta, user_alpha, user_beta, worker, qdrant_store = (
+        multi_tenant_rag_context
+    )
 
     # 1. Login as Alice (Alpha) and create KB in Alpha
-    await client.post("/api/v1/auth/login", json={"email": "alice@alpha.com", "password": "Secret123!Safe"})
+    await client.post(
+        "/api/v1/auth/login", json={"email": "alice@alpha.com", "password": "Secret123!Safe"}
+    )
     kb_alpha_res = await client.post(
         f"/api/v1/organizations/{org_alpha.id}/knowledge-bases",
         json={"name": "Alpha Docs", "description": "Alpha KB"},
@@ -117,7 +161,9 @@ async def test_cross_tenant_knowledge_base_search_denied(multi_tenant_rag_contex
     _kb_alpha_id = kb_alpha_res.json()["id"]
 
     # 2. Login as Bob (Beta) and create KB in Beta
-    await client.post("/api/v1/auth/login", json={"email": "bob@beta.com", "password": "Secret123!Safe"})
+    await client.post(
+        "/api/v1/auth/login", json={"email": "bob@beta.com", "password": "Secret123!Safe"}
+    )
     kb_beta_res = await client.post(
         f"/api/v1/organizations/{org_beta.id}/knowledge-bases",
         json={"name": "Beta Docs", "description": "Beta KB"},
@@ -126,7 +172,9 @@ async def test_cross_tenant_knowledge_base_search_denied(multi_tenant_rag_contex
     kb_beta_id = kb_beta_res.json()["id"]
 
     # 3. Alice (Alpha) logs back in
-    await client.post("/api/v1/auth/login", json={"email": "alice@alpha.com", "password": "Secret123!Safe"})
+    await client.post(
+        "/api/v1/auth/login", json={"email": "alice@alpha.com", "password": "Secret123!Safe"}
+    )
 
     # Attempt direct ID access to Beta's KB under Alpha route
     with patch("app.services.rag.retrieval.get_qdrant_store", return_value=qdrant_store):
@@ -149,10 +197,14 @@ async def test_cross_tenant_knowledge_base_search_denied(multi_tenant_rag_contex
 @pytest.mark.asyncio
 async def test_cross_tenant_vector_isolation(multi_tenant_rag_context):
     """Verify search vectors in a shared Qdrant collection never leak across tenant boundaries."""
-    client, session_factory, org_alpha, org_beta, user_alpha, user_beta, worker, qdrant_store = multi_tenant_rag_context
+    client, session_factory, org_alpha, org_beta, user_alpha, user_beta, worker, qdrant_store = (
+        multi_tenant_rag_context
+    )
 
     # 1. Login as Bob (Beta) and upload sensitive document
-    await client.post("/api/v1/auth/login", json={"email": "bob@beta.com", "password": "Secret123!Safe"})
+    await client.post(
+        "/api/v1/auth/login", json={"email": "bob@beta.com", "password": "Secret123!Safe"}
+    )
     kb_beta_res = await client.post(
         f"/api/v1/organizations/{org_beta.id}/knowledge-bases",
         json={"name": "Beta Confidential", "description": "Confidential"},
@@ -161,14 +213,22 @@ async def test_cross_tenant_vector_isolation(multi_tenant_rag_context):
 
     await client.post(
         f"/api/v1/organizations/{org_beta.id}/knowledge-bases/{kb_beta_id}/documents",
-        files={"file": ("secret.txt", b"BETA CONFIDENTIAL PROJECT ZEUS SECRET KEY 998877", "text/plain")},
+        files={
+            "file": (
+                "secret.txt",
+                b"BETA CONFIDENTIAL PROJECT ZEUS SECRET KEY 998877",
+                "text/plain",
+            )
+        },
         data={"title": "Project Zeus"},
     )
     # Process Beta document into shared Qdrant store
     await worker.run_once()
 
     # 2. Login as Alice (Alpha) and upload different document
-    await client.post("/api/v1/auth/login", json={"email": "alice@alpha.com", "password": "Secret123!Safe"})
+    await client.post(
+        "/api/v1/auth/login", json={"email": "alice@alpha.com", "password": "Secret123!Safe"}
+    )
     kb_alpha_res = await client.post(
         f"/api/v1/organizations/{org_alpha.id}/knowledge-bases",
         json={"name": "Alpha General", "description": "General"},
@@ -177,7 +237,13 @@ async def test_cross_tenant_vector_isolation(multi_tenant_rag_context):
 
     await client.post(
         f"/api/v1/organizations/{org_alpha.id}/knowledge-bases/{kb_alpha_id}/documents",
-        files={"file": ("public.txt", b"Alpha organization public support hours 9am to 5pm", "text/plain")},
+        files={
+            "file": (
+                "public.txt",
+                b"Alpha organization public support hours 9am to 5pm",
+                "text/plain",
+            )
+        },
         data={"title": "Alpha Support"},
     )
     # Process Alpha document
@@ -198,7 +264,9 @@ async def test_cross_tenant_vector_isolation(multi_tenant_rag_context):
             assert ev["knowledge_base_id"] != kb_beta_id
 
         # Bob (Beta) searching for "Project Zeus" finds his document
-        await client.post("/api/v1/auth/login", json={"email": "bob@beta.com", "password": "Secret123!Safe"})
+        await client.post(
+            "/api/v1/auth/login", json={"email": "bob@beta.com", "password": "Secret123!Safe"}
+        )
         beta_search_res = await client.post(
             f"/api/v1/organizations/{org_beta.id}/knowledge/search",
             json={"query": "Project Zeus secret key"},
@@ -212,9 +280,13 @@ async def test_cross_tenant_vector_isolation(multi_tenant_rag_context):
 @pytest.mark.asyncio
 async def test_deleted_document_excluded_from_retrieval(multi_tenant_rag_context):
     """Verify soft-deleted documents immediately disappear from retrieval candidates."""
-    client, session_factory, org_alpha, org_beta, user_alpha, user_beta, worker, qdrant_store = multi_tenant_rag_context
+    client, session_factory, org_alpha, org_beta, user_alpha, user_beta, worker, qdrant_store = (
+        multi_tenant_rag_context
+    )
 
-    await client.post("/api/v1/auth/login", json={"email": "alice@alpha.com", "password": "Secret123!Safe"})
+    await client.post(
+        "/api/v1/auth/login", json={"email": "alice@alpha.com", "password": "Secret123!Safe"}
+    )
     kb_res = await client.post(
         f"/api/v1/organizations/{org_alpha.id}/knowledge-bases",
         json={"name": "Alpha Docs", "description": "Docs"},
@@ -223,14 +295,18 @@ async def test_deleted_document_excluded_from_retrieval(multi_tenant_rag_context
 
     upload_res = await client.post(
         f"/api/v1/organizations/{org_alpha.id}/knowledge-bases/{kb_id}/documents",
-        files={"file": ("doc.txt", b"Temporary deprecation notice for legacy API v1", "text/plain")},
+        files={
+            "file": ("doc.txt", b"Temporary deprecation notice for legacy API v1", "text/plain")
+        },
         data={"title": "Deprecation Notice"},
     )
     doc_id = upload_res.json()["document"]["id"]
     await worker.run_once()
 
-    with patch("app.services.rag.retrieval.get_qdrant_store", return_value=qdrant_store), \
-         patch("app.services.document_service.get_qdrant_store", return_value=qdrant_store):
+    with (
+        patch("app.services.rag.retrieval.get_qdrant_store", return_value=qdrant_store),
+        patch("app.services.document_service.get_qdrant_store", return_value=qdrant_store),
+    ):
         # 1. Search before deletion finds document
         res_before = await client.post(
             f"/api/v1/organizations/{org_alpha.id}/knowledge/search",

@@ -47,9 +47,13 @@ class RetrievalService:
 
         normalized = query.strip()
         if len(normalized) < 2:
-            raise InvalidRetrievalQueryException("Search query must be at least 2 characters in length.")
+            raise InvalidRetrievalQueryException(
+                "Search query must be at least 2 characters in length."
+            )
         if len(normalized) > 2000:
-            raise InvalidRetrievalQueryException("Search query exceeds maximum allowed length of 2000 characters.")
+            raise InvalidRetrievalQueryException(
+                "Search query exceeds maximum allowed length of 2000 characters."
+            )
 
         return normalized
 
@@ -189,10 +193,7 @@ class RetrievalService:
         all_ids = set(vector_ranks) | set(lexical_ranks)
         if not lexical_ranks:
             # Pure vector scoring
-            return [
-                (cid, vector_scores.get(cid, 0.0), "cosine_similarity")
-                for cid in vector_ranks
-            ]
+            return [(cid, vector_scores.get(cid, 0.0), "cosine_similarity") for cid in vector_ranks]
 
         fused_scores: dict[UUID, float] = {}
         for cid in all_ids:
@@ -286,7 +287,9 @@ class RetrievalService:
                 continue
 
             chunk, doc_title = verified_lookup[cid]
-            headings: list[str] = chunk.heading_hierarchy if isinstance(chunk.heading_hierarchy, list) else []
+            headings: list[str] = (
+                chunk.heading_hierarchy if isinstance(chunk.heading_hierarchy, list) else []
+            )
             section_title = headings[-1] if headings else None
 
             evidence_item = EvidenceItem(

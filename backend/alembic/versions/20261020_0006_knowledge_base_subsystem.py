@@ -230,11 +230,24 @@ def upgrade() -> None:
             name="ck_documents_lifecycle_status",
         ),
     )
-    op.create_index(op.f("ix_documents_organization_id"), "documents", ["organization_id"], unique=False)
-    op.create_index(op.f("ix_documents_knowledge_base_id"), "documents", ["knowledge_base_id"], unique=False)
-    op.create_index("ix_documents_org_kb", "documents", ["organization_id", "knowledge_base_id"], unique=False)
-    op.create_index("ix_documents_org_status", "documents", ["organization_id", "status"], unique=False)
-    op.create_index("ix_documents_org_lifecycle", "documents", ["organization_id", "lifecycle_status"], unique=False)
+    op.create_index(
+        op.f("ix_documents_organization_id"), "documents", ["organization_id"], unique=False
+    )
+    op.create_index(
+        op.f("ix_documents_knowledge_base_id"), "documents", ["knowledge_base_id"], unique=False
+    )
+    op.create_index(
+        "ix_documents_org_kb", "documents", ["organization_id", "knowledge_base_id"], unique=False
+    )
+    op.create_index(
+        "ix_documents_org_status", "documents", ["organization_id", "status"], unique=False
+    )
+    op.create_index(
+        "ix_documents_org_lifecycle",
+        "documents",
+        ["organization_id", "lifecycle_status"],
+        unique=False,
+    )
 
     # 3. Create document_versions table
     op.create_table(
@@ -406,10 +419,27 @@ def upgrade() -> None:
             ondelete="CASCADE",
         ),
     )
-    op.create_index(op.f("ix_document_versions_organization_id"), "document_versions", ["organization_id"], unique=False)
-    op.create_index(op.f("ix_document_versions_document_id"), "document_versions", ["document_id"], unique=False)
-    op.create_index("ix_document_versions_queue", "document_versions", ["processing_status", "next_attempt_at", "created_at"], unique=False)
-    op.create_index("ix_document_versions_org_doc", "document_versions", ["organization_id", "document_id"], unique=False)
+    op.create_index(
+        op.f("ix_document_versions_organization_id"),
+        "document_versions",
+        ["organization_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_document_versions_document_id"), "document_versions", ["document_id"], unique=False
+    )
+    op.create_index(
+        "ix_document_versions_queue",
+        "document_versions",
+        ["processing_status", "next_attempt_at", "created_at"],
+        unique=False,
+    )
+    op.create_index(
+        "ix_document_versions_org_doc",
+        "document_versions",
+        ["organization_id", "document_id"],
+        unique=False,
+    )
 
     # 4. Create document_chunks table
     op.create_table(
@@ -533,13 +563,42 @@ def upgrade() -> None:
             ondelete="CASCADE",
         ),
     )
-    op.create_index(op.f("ix_document_chunks_organization_id"), "document_chunks", ["organization_id"], unique=False)
-    op.create_index(op.f("ix_document_chunks_knowledge_base_id"), "document_chunks", ["knowledge_base_id"], unique=False)
-    op.create_index(op.f("ix_document_chunks_document_id"), "document_chunks", ["document_id"], unique=False)
-    op.create_index(op.f("ix_document_chunks_version_id"), "document_chunks", ["version_id"], unique=False)
-    op.create_index("ix_document_chunks_org_doc", "document_chunks", ["organization_id", "document_id"], unique=False)
-    op.create_index("ix_document_chunks_org_ver", "document_chunks", ["organization_id", "version_id"], unique=False)
-    op.create_index("ix_document_chunks_ver_seq", "document_chunks", ["version_id", "sequence_number"], unique=False)
+    op.create_index(
+        op.f("ix_document_chunks_organization_id"),
+        "document_chunks",
+        ["organization_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_document_chunks_knowledge_base_id"),
+        "document_chunks",
+        ["knowledge_base_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_document_chunks_document_id"), "document_chunks", ["document_id"], unique=False
+    )
+    op.create_index(
+        op.f("ix_document_chunks_version_id"), "document_chunks", ["version_id"], unique=False
+    )
+    op.create_index(
+        "ix_document_chunks_org_doc",
+        "document_chunks",
+        ["organization_id", "document_id"],
+        unique=False,
+    )
+    op.create_index(
+        "ix_document_chunks_org_ver",
+        "document_chunks",
+        ["organization_id", "version_id"],
+        unique=False,
+    )
+    op.create_index(
+        "ix_document_chunks_ver_seq",
+        "document_chunks",
+        ["version_id", "sequence_number"],
+        unique=False,
+    )
 
     # 5. Row-Level Security (RLS) policies on PostgreSQL
     if is_postgres:

@@ -56,7 +56,9 @@ async def run_evaluation() -> dict:
     org_id = uuid.uuid4()
 
     async with session_factory() as db:
-        org = Organization(id=org_id, name="Eval Corp", slug="eval-corp", status=OrganizationStatus.ACTIVE)
+        org = Organization(
+            id=org_id, name="Eval Corp", slug="eval-corp", status=OrganizationStatus.ACTIVE
+        )
         db.add(org)
         await db.commit()
 
@@ -76,14 +78,20 @@ async def run_evaluation() -> dict:
     async with session_factory() as db:
         service = DocumentService(db)
         kb = await service.create_knowledge_base(org_id, name="Reference Policies")
-        await service.upload_document(org_id, kb.id, "security.md", DOC_SECURITY_POLICY, title="Enterprise Security Policy")
-        await service.upload_document(org_id, kb.id, "sla.md", DOC_SLA_AGREEMENT, title="Customer SLA Agreement")
+        await service.upload_document(
+            org_id, kb.id, "security.md", DOC_SECURITY_POLICY, title="Enterprise Security Policy"
+        )
+        await service.upload_document(
+            org_id, kb.id, "sla.md", DOC_SLA_AGREEMENT, title="Customer SLA Agreement"
+        )
 
     # Process all documents into Qdrant
     await worker.run_once()
     await worker.run_once()
 
-    evaluator = RAGEvaluator(embedding_provider="fastembed", embedding_model="BAAI/bge-small-en-v1.5")
+    evaluator = RAGEvaluator(
+        embedding_provider="fastembed", embedding_model="BAAI/bge-small-en-v1.5"
+    )
     case_results = []
 
     answer_service = GroundedAnswerService()

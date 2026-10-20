@@ -90,6 +90,10 @@ class OrganizationContext:
     def role(self):
         return self.membership.role
 
+    @property
+    def organization_id(self) -> uuid.UUID:
+        return self.organization.id
+
     def has_permission(self, permission: Permission) -> bool:
         """Check if caller's active role possesses the required permission."""
         return has_permission(self.role, permission)

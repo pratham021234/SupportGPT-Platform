@@ -6,7 +6,6 @@ import {
   ShieldCheck,
   Inbox,
   BookOpen,
-  CheckCircle,
   AlertOctagon,
   BarChart3,
   Settings,
@@ -74,15 +73,9 @@ export function AppSidebar() {
             />
             <NavigationItem
               label="Response Verification"
-              href="/modules/verification"
+              href="/verification"
               icon={<ShieldCheck className="w-4 h-4" />}
-              badge={{ text: "Phase 05", variant: "neutral" }}
-            />
-            <NavigationItem
-              label="Human Approvals"
-              href="/modules/approvals"
-              icon={<CheckCircle className="w-4 h-4" />}
-              badge={{ text: "Phase 06", variant: "neutral" }}
+              badge={{ text: "Phase 07", variant: "success" }}
             />
             <NavigationItem
               label="Failure Investigation"

@@ -238,6 +238,71 @@ class LLMGenerationException(AppException):
         )
 
 
+# Phase 07: Response Verification & Approval Exceptions
+
+
+class SelfApprovalForbiddenException(AppException):
+    def __init__(
+        self,
+        message: str = "Self-approval is forbidden. An independent reviewer must approve this draft under separation-of-duties policy.",
+    ) -> None:
+        super().__init__(
+            message=message,
+            code="SELF_APPROVAL_FORBIDDEN",
+            status_code=status.HTTP_403_FORBIDDEN,
+        )
+
+
+class StaleDraftApprovalException(AppException):
+    def __init__(
+        self,
+        message: str = "The draft has been modified since this approval request was created. Decision must target the active version.",
+    ) -> None:
+        super().__init__(
+            message=message,
+            code="STALE_DRAFT_VERSION",
+            status_code=status.HTTP_409_CONFLICT,
+        )
+
+
+class ApprovalNotFoundException(AppException):
+    def __init__(self, approval_id: Any) -> None:
+        super().__init__(
+            message=f"Approval request '{approval_id}' was not found in this organization.",
+            code="APPROVAL_NOT_FOUND",
+            status_code=status.HTTP_404_NOT_FOUND,
+        )
+
+
+class InvalidApprovalStateException(AppException):
+    def __init__(
+        self, message: str = "Approval request is not in a decidable pending state."
+    ) -> None:
+        super().__init__(
+            message=message,
+            code="INVALID_APPROVAL_STATE",
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
+
+
+class DraftNotFoundException(AppException):
+    def __init__(self, draft_id: Any) -> None:
+        super().__init__(
+            message=f"Response draft '{draft_id}' was not found in this organization.",
+            code="DRAFT_NOT_FOUND",
+            status_code=status.HTTP_404_NOT_FOUND,
+        )
+
+
+class PolicyNotFoundException(AppException):
+    def __init__(self, policy_id: Any) -> None:
+        super().__init__(
+            message=f"Policy rule '{policy_id}' was not found in this organization.",
+            code="POLICY_NOT_FOUND",
+            status_code=status.HTTP_404_NOT_FOUND,
+        )
+
+
 def register_error_handlers(app: FastAPI) -> None:
     """Register uniform RFC 7807/structured error handlers with the FastAPI application."""
 

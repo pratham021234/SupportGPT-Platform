@@ -87,7 +87,9 @@ class QdrantStoreManager:
             )
             # In testing or development, fall back safely to in-memory mode if server is not reachable
             if settings.ENVIRONMENT in ("development", "test", "local"):
-                logger.warning("Falling back to local in-memory Qdrant engine for development/testing.")
+                logger.warning(
+                    "Falling back to local in-memory Qdrant engine for development/testing."
+                )
                 return QdrantClient(location=":memory:")
             raise VectorStoreUnavailableException(
                 f"Failed to connect to Qdrant vector engine at {settings.QDRANT_HOST}:{settings.QDRANT_PORT}"
@@ -133,7 +135,12 @@ class QdrantStoreManager:
             )
 
             # Create payload indexes on keyword fields for tenant isolation & fast lookups
-            for field in ("organization_id", "knowledge_base_id", "document_id", "document_version_id"):
+            for field in (
+                "organization_id",
+                "knowledge_base_id",
+                "document_id",
+                "document_version_id",
+            ):
                 try:
                     self.client.create_payload_index(
                         collection_name=self.collection_name,
@@ -146,7 +153,9 @@ class QdrantStoreManager:
         except Exception as exc:
             if isinstance(exc, (VectorDimensionMismatchException, VectorStoreUnavailableException)):
                 raise
-            raise VectorIndexingException(f"Error ensuring Qdrant collection '{self.collection_name}': {exc}") from exc
+            raise VectorIndexingException(
+                f"Error ensuring Qdrant collection '{self.collection_name}': {exc}"
+            ) from exc
 
     def upsert_chunks(self, chunks_with_vectors: list[tuple[Any, list[float]]]) -> int:
         """Batch upsert document chunks into Qdrant with deterministic point IDs.
@@ -163,7 +172,9 @@ class QdrantStoreManager:
         points: list[PointStruct] = []
         for chunk, vector in chunks_with_vectors:
             point_id = str(chunk.id)
-            ver_id = getattr(chunk, "version_id", None) or getattr(chunk, "document_version_id", None)
+            ver_id = getattr(chunk, "version_id", None) or getattr(
+                chunk, "document_version_id", None
+            )
             seq_num = getattr(chunk, "sequence_number", None) or getattr(chunk, "sequence_num", 0)
             chksum = getattr(chunk, "checksum", None) or getattr(chunk, "chunk_checksum_sha256", "")
             headings = getattr(chunk, "heading_hierarchy", [])

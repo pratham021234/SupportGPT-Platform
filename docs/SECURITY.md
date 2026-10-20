@@ -167,25 +167,50 @@ Retrieved document content is untrusted user-supplied data that may contain mali
 - **Authoritative Citation Validation**: The server-side citation parser extracts all citation references, resolves them to specific `chunk_id` values, and verifies that every cited chunk was present in the retrieved candidate set. Citations citing nonexistent or ungrounded evidence are automatically removed from the structured response.
 - **Deterministic Abstention**: When retrieval finds zero matching chunks, or when similarity scores fall below the configurable relevance threshold, the system automatically abstains (`NO_RELEVANT_EVIDENCE` or `EVIDENCE_INSUFFICIENT`) rather than manufacturing a speculative completion.
 
+## 8. Active Security Controls (Phase 07 Response Verification & Human Approval)
+
+### A. Separation of Duties Invariant
+- High-risk or policy-governed drafts require human review before they are considered approved.
+- To prevent insider misuse or accidental self-approval by rogue or mistaken operators, `ApprovalService.decide_approval` enforces server-side separation of duties: `requested_by_user_id != decider.id`. Attempting to self-approve raises `SelfApprovalForbiddenException` (HTTP 403).
+- Role requirements are verified through `VERIFICATION_APPROVE` and `POLICIES_MANAGE` permissions. Clients cannot self-assign reviewer status or elevate privileges.
+
+### B. Exact Draft Version Binding & Invalidation Invariant
+- Approval decisions are strictly cryptographically bound to the exact `draft_id` and `draft_version`.
+- If an agent revises a draft candidate, `revise_response_draft` transactionally increments the draft version to `vN+1` and marks all prior `pending` and `approved` requests for that draft as `INVALIDATED`.
+- Stale browser sessions attempting to approve an earlier version are rejected with `StaleDraftApprovalException` (HTTP 409).
+
+### C. Multi-Tenant Row-Level Security for Verification Models
+- PostgreSQL 16 Row-Level Security (RLS) is enabled and forced across all 6 verification tables:
+  `response_drafts`, `verification_runs`, `claim_findings`, `policy_rules`, `approval_requests`, `verification_audit_events`.
+- Cross-tenant queries return empty sets; cross-tenant writes trigger PostgreSQL RLS policy violations.
+
+### D. Deterministic Contradiction Detection
+- Critical policy rules and contradictory documentary claims (e.g., promising 100% unconditional refund when policy specifies non-refundable) are blocked deterministically.
+- Disposition status `BLOCKED` with risk level `CRITICAL` prevents automatic delivery and mandates supervisory escalation.
+
+### E. Append-Only Audit Trail
+- All lifecycle events (`draft_created`, `draft_revised`, `verification_completed`, `approval_requested`, `approval_granted`, `approval_rejected`, `revision_requested`, `approval_invalidated`, `policy_toggled`) are durably recorded in `verification_audit_events`.
+- Tenant-scoped audit logs prevent tampering or unauthorized deletion.
+
 ---
 
-## 8. Security Boundary & Planned Milestones
+## 9. Security Boundary & Planned Milestones
 
 | Security Milestone | Status | Description |
 |---|---|---|
-| **Multi-Tenant Row-Level Security (RLS)** | **Active (Phase 02–05)** | PostgreSQL RLS policies enforcing tenant isolation across tickets, events, sources, knowledge bases, documents, and chunks. |
+| **Multi-Tenant Row-Level Security (RLS)** | **Active (Phase 02–07)** | PostgreSQL RLS policies enforcing tenant isolation across tickets, events, sources, knowledge bases, documents, chunks, drafts, verification runs, policies, approvals, and audit events. |
 | **Authentication & RBAC** | **Active (Phase 02)** | Argon2id password hashing, server-side revocable sessions, organization memberships, and role-based access control. |
 | **Ticket & Conversation Authorization** | **Active (Phase 03)** | Direct-ID attack resistance, OCC conflict prevention, author impersonation blocks, and atomic event audit trails. |
 | **Inbound Webhook Verification & Secrets** | **Active (Phase 04)** | Cryptographic signature validation (HMAC-SHA256), replay protection, AES-CTR secret encryption, and idempotent event processing. |
 | **Safe Storage & Document Processing** | **Active (Phase 05)** | Path traversal guards, magic byte verification, zip bomb limits, and deterministic chunk provenance. |
 | **Vector Store Tenant Isolation & Injection Defense** | **Active (Phase 06)** | Dual-layer tenant isolation (Qdrant payload filters + PostgreSQL RLS), XML boundary sanitization, citation verification, and automated abstention. |
-| **Claim-Level Hallucination Guard** | Phase 07 | Automated decomposition of model completions into atomic claims, checking evidence grounding before delivery. |
-| **Policy Approval Gates** | Phase 08 | Fine-grained intervention gates requiring dual authorization for sensitive actions. |
+| **Response Verification & Separation of Duties** | **Active (Phase 07)** | Claim-level evidence grounding, deterministic policy rules, exact version binding, separation of duties, and append-only audit trails. |
+| **Outbound Dispatch & External Actions** | Phase 08 | Authorization and rate-limiting for external ticketing write operations, email delivery, and customer messaging. |
 | **PII Redaction & Sanitization** | Phase 09 | Automated masking of customer Personally Identifiable Information in forensic trace logs. |
 
 ---
 
-## 8. Vulnerability Reporting
+## 10. Vulnerability Reporting
 For vulnerability disclosures and security findings, contact:  
 `security@supportgpt.ai`
 

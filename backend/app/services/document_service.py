@@ -80,7 +80,9 @@ class DocumentService:
             return kb
         except IntegrityError as exc:
             await self.session.rollback()
-            raise ConflictException("Failed to create knowledge base due to database constraint.") from exc
+            raise ConflictException(
+                "Failed to create knowledge base due to database constraint."
+            ) from exc
 
     async def get_knowledge_base(
         self, organization_id: uuid.UUID, kb_id: uuid.UUID
@@ -132,7 +134,9 @@ class DocumentService:
 
         document_id = uuid.uuid4()
         version_id = uuid.uuid4()
-        storage_key = self.storage.generate_storage_key(organization_id, document_id, version_number=1)
+        storage_key = self.storage.generate_storage_key(
+            organization_id, document_id, version_number=1
+        )
 
         # Durably store binary object first
         storage_meta = await self.storage.store(
@@ -211,7 +215,9 @@ class DocumentService:
         verified_media_type, clean_filename = validate_document_file(content_bytes, filename)
 
         # Find next sequential version number
-        version_count_query = select(func.coalesce(func.max(DocumentVersion.version_number), 0)).where(
+        version_count_query = select(
+            func.coalesce(func.max(DocumentVersion.version_number), 0)
+        ).where(
             DocumentVersion.document_id == document_id,
             DocumentVersion.organization_id == organization_id,
         )
@@ -219,7 +225,9 @@ class DocumentService:
         next_version_num = max_v + 1
 
         version_id = uuid.uuid4()
-        storage_key = self.storage.generate_storage_key(organization_id, document_id, next_version_num)
+        storage_key = self.storage.generate_storage_key(
+            organization_id, document_id, next_version_num
+        )
 
         storage_meta = await self.storage.store(
             storage_key=storage_key,
@@ -284,7 +292,9 @@ class DocumentService:
             if ver.processing_started_at:
                 elapsed = (now - ver.processing_started_at).total_seconds()
                 if elapsed < self.settings.DOCUMENT_PROCESSING_LEASE_TIMEOUT_SECONDS:
-                    raise ConflictException("Document version is currently being processed by an active worker.")
+                    raise ConflictException(
+                        "Document version is currently being processed by an active worker."
+                    )
 
         # Reset processing state for reprocessing
         ver.processing_status = DocumentProcessingStatus.QUEUED
@@ -317,13 +327,13 @@ class DocumentService:
         try:
             get_qdrant_store().delete_by_document_id(document_id)
         except Exception as q_exc:
-            logger.warning("Failed to de-index document %s from Qdrant: %s", str(document_id), str(q_exc))
+            logger.warning(
+                "Failed to de-index document %s from Qdrant: %s", str(document_id), str(q_exc)
+            )
 
         return doc
 
-    async def get_document(
-        self, organization_id: uuid.UUID, document_id: uuid.UUID
-    ) -> Document:
+    async def get_document(self, organization_id: uuid.UUID, document_id: uuid.UUID) -> Document:
         """Retrieve a single document ensuring organization isolation."""
         tenant = TenantScopedQuery(self.session, organization_id)
         doc = await tenant.get_document(document_id)
@@ -381,7 +391,9 @@ class DocumentService:
         if not target_version_id:
             return [], 0
 
-        chunks = list(await tenant.list_document_chunks(target_version_id, limit=limit, offset=offset))
+        chunks = list(
+            await tenant.list_document_chunks(target_version_id, limit=limit, offset=offset)
+        )
 
         count_query = select(func.count(DocumentChunk.id)).where(
             DocumentChunk.version_id == target_version_id,

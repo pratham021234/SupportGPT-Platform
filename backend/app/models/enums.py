@@ -214,3 +214,113 @@ class DocumentLifecycleStatus(StrEnum):
     ACTIVE = "active"
     ARCHIVED = "archived"
     DELETED = "deleted"
+
+
+# Phase 07: Response Verification, Policy Enforcement & Approval Enums
+
+
+class DraftLifecycleStatus(StrEnum):
+    DRAFT = "draft"
+    VERIFICATION_PENDING = "verification_pending"
+    VERIFICATION_FAILED = "verification_failed"
+    VERIFIED = "verified"
+    APPROVAL_PENDING = "approval_pending"
+    APPROVED = "approved"
+    REJECTED = "rejected"
+    REVISION_REQUIRED = "revision_required"
+    SUPERSEDED = "superseded"
+
+
+class VerificationStatus(StrEnum):
+    PASSED = "passed"
+    PASSED_WITH_WARNINGS = "passed_with_warnings"
+    NEEDS_REVISION = "needs_revision"
+    BLOCKED = "blocked"
+    FAILED = "failed"
+
+
+class RiskLevel(StrEnum):
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+    CRITICAL = "critical"
+
+
+class ClaimCategory(StrEnum):
+    POLICY = "policy"
+    PRODUCT_FACT = "product_fact"
+    PRICING_REFUND = "pricing_refund"
+    SLA_COMMITMENT = "sla_commitment"
+    GENERAL = "general"
+
+
+class ClaimSupportStatus(StrEnum):
+    SUPPORTED = "supported"
+    PARTIALLY_SUPPORTED = "partially_supported"
+    UNSUPPORTED = "unsupported"
+    CONTRADICTED = "contradicted"
+    NOT_VERIFIABLE = "not_verifiable"
+
+
+class ClaimVerificationMethod(StrEnum):
+    DETERMINISTIC_LEXICAL = "deterministic_lexical"
+    SEMANTIC_NLI = "semantic_nli"
+    EVIDENCE_GROUNDING = "evidence_grounding"
+    RULE_ENGINE = "rule_engine"
+
+
+class PolicyCategory(StrEnum):
+    FACTUAL_GROUNDING = "factual_grounding"
+    PROHIBITED_TERMS = "prohibited_terms"
+    MANDATORY_DISCLAIMERS = "mandatory_disclaimers"
+    RESTRICTED_COMMITMENTS = "restricted_commitments"
+    REFUND_POLICY = "refund_policy"
+    SENSITIVE_DATA = "sensitive_data"
+    APPROVAL_GATE = "approval_gate"
+
+
+class PolicyRuleType(StrEnum):
+    UNSUPPORTED_CLAIM_BLOCK = "unsupported_claim_block"
+    KEYWORD_PROHIBITION = "keyword_prohibition"
+    REQUIRED_PHRASE = "required_phrase"
+    MAX_LENGTH = "max_length"
+    REFUND_LIMIT = "refund_limit"
+    MANDATORY_APPROVAL_ON_RISK = "mandatory_approval_on_risk"
+
+
+class PolicySeverity(StrEnum):
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+    CRITICAL = "critical"
+
+
+class ApprovalStatus(StrEnum):
+    PENDING = "pending"
+    APPROVED = "approved"
+    REJECTED = "rejected"
+    REVISION_REQUESTED = "revision_requested"
+    INVALIDATED = "invalidated"
+    CANCELLED = "cancelled"
+
+
+class ApprovalDecisionType(StrEnum):
+    APPROVE = "approve"
+    REJECT = "reject"
+    REQUEST_REVISION = "request_revision"
+
+
+class VerificationAuditEventType(StrEnum):
+    DRAFT_CREATED = "draft_created"
+    DRAFT_REVISED = "draft_revised"
+    VERIFICATION_STARTED = "verification_started"
+    VERIFICATION_COMPLETED = "verification_completed"
+    VERIFICATION_FAILED = "verification_failed"
+    POLICY_CREATED = "policy_created"
+    POLICY_UPDATED = "policy_updated"
+    POLICY_TOGGLED = "policy_toggled"
+    APPROVAL_REQUESTED = "approval_requested"
+    APPROVAL_GRANTED = "approval_granted"
+    APPROVAL_REJECTED = "approval_rejected"
+    REVISION_REQUESTED = "revision_requested"
+    APPROVAL_INVALIDATED = "approval_invalidated"

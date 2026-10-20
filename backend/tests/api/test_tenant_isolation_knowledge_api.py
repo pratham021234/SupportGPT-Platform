@@ -48,8 +48,12 @@ async def tenant_isolation_context() -> AsyncIterator[
 
     async with session_factory() as db:
         # 1. Org Alpha & Org Beta
-        org_a = Organization(name="Tenant Alpha", slug="tenant-alpha", status=OrganizationStatus.ACTIVE)
-        org_b = Organization(name="Tenant Beta", slug="tenant-beta", status=OrganizationStatus.ACTIVE)
+        org_a = Organization(
+            name="Tenant Alpha", slug="tenant-alpha", status=OrganizationStatus.ACTIVE
+        )
+        org_b = Organization(
+            name="Tenant Beta", slug="tenant-beta", status=OrganizationStatus.ACTIVE
+        )
         db.add_all([org_a, org_b])
         await db.flush()
 
@@ -145,11 +149,15 @@ async def test_cross_tenant_knowledge_isolation(tenant_isolation_context):
     assert res_cross_doc.status_code == 404
 
     # Cannot access Alpha's document versions
-    res_cross_ver = await client.get(f"/api/v1/organizations/{org_b.id}/documents/{doc_a_id}/versions")
+    res_cross_ver = await client.get(
+        f"/api/v1/organizations/{org_b.id}/documents/{doc_a_id}/versions"
+    )
     assert res_cross_ver.status_code == 404
 
     # Cannot access Alpha's chunks
-    res_cross_chunks = await client.get(f"/api/v1/organizations/{org_b.id}/documents/{doc_a_id}/chunks")
+    res_cross_chunks = await client.get(
+        f"/api/v1/organizations/{org_b.id}/documents/{doc_a_id}/chunks"
+    )
     assert res_cross_chunks.status_code == 404
 
     # Cannot delete Alpha's document
@@ -157,5 +165,7 @@ async def test_cross_tenant_knowledge_isolation(tenant_isolation_context):
     assert res_cross_del.status_code == 404
 
     # Cannot reprocess Alpha's document
-    res_cross_reprocess = await client.post(f"/api/v1/organizations/{org_b.id}/documents/{doc_a_id}/reprocess")
+    res_cross_reprocess = await client.post(
+        f"/api/v1/organizations/{org_b.id}/documents/{doc_a_id}/reprocess"
+    )
     assert res_cross_reprocess.status_code == 404

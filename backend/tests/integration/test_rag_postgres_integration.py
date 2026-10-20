@@ -52,7 +52,9 @@ async def live_postgres_rag_env():
         await session.commit()
 
     async with session_factory() as session:
-        await session.execute(text(f"SELECT set_config('app.current_organization_id', '{org_id}', false)"))
+        await session.execute(
+            text(f"SELECT set_config('app.current_organization_id', '{org_id}', false)")
+        )
         kb = KnowledgeBase(
             id=kb_id,
             organization_id=org_id,
@@ -82,7 +84,9 @@ async def live_postgres_rag_env():
     async with session_factory() as session:
         await session.execute(text("SELECT set_config('app.is_system_admin', 'true', false)"))
         await session.execute(delete(DocumentChunk).where(DocumentChunk.organization_id == org_id))
-        await session.execute(delete(DocumentVersion).where(DocumentVersion.organization_id == org_id))
+        await session.execute(
+            delete(DocumentVersion).where(DocumentVersion.organization_id == org_id)
+        )
         await session.execute(delete(Document).where(Document.organization_id == org_id))
         await session.execute(delete(KnowledgeBase).where(KnowledgeBase.id == kb_id))
         await session.execute(delete(Organization).where(Organization.id == org_id))
@@ -94,7 +98,9 @@ async def live_postgres_rag_env():
 @pytest.mark.asyncio
 async def test_live_postgres_rag_pipeline(live_postgres_rag_env):
     """Verify live PostgreSQL full-text search, Qdrant indexing, and grounded answering."""
-    session_factory, org_id, kb_id, worker, qdrant_manager, embedding_provider = live_postgres_rag_env
+    session_factory, org_id, kb_id, worker, qdrant_manager, embedding_provider = (
+        live_postgres_rag_env
+    )
 
     doc_text = (
         b"# Enterprise Customer SLA Terms\n\n"
@@ -109,7 +115,9 @@ async def test_live_postgres_rag_pipeline(live_postgres_rag_env):
 
     # 1. Upload Document into Live PostgreSQL
     async with session_factory() as session:
-        await session.execute(text(f"SELECT set_config('app.current_organization_id', '{org_id}', true)"))
+        await session.execute(
+            text(f"SELECT set_config('app.current_organization_id', '{org_id}', true)")
+        )
         service = DocumentService(session)
         doc, ver = await service.upload_document(
             organization_id=org_id,
@@ -127,18 +135,26 @@ async def test_live_postgres_rag_pipeline(live_postgres_rag_env):
 
     # 3. Verify Version and Document are INDEXED in PostgreSQL
     async with session_factory() as session:
-        await session.execute(text(f"SELECT set_config('app.current_organization_id', '{org_id}', true)"))
-        version = (await session.execute(select(DocumentVersion).where(DocumentVersion.id == ver_id))).scalar_one()
+        await session.execute(
+            text(f"SELECT set_config('app.current_organization_id', '{org_id}', true)")
+        )
+        version = (
+            await session.execute(select(DocumentVersion).where(DocumentVersion.id == ver_id))
+        ).scalar_one()
         assert version.processing_status == DocumentProcessingStatus.INDEXED
         assert version.chunk_count >= 2
 
-        document = (await session.execute(select(Document).where(Document.id == doc_id))).scalar_one()
+        document = (
+            await session.execute(select(Document).where(Document.id == doc_id))
+        ).scalar_one()
         assert document.status == DocumentProcessingStatus.INDEXED
         assert document.current_version_id == ver_id
 
     # 4. Authoritative Retrieval on Live PostgreSQL with Hybrid Search
     async with session_factory() as session:
-        await session.execute(text(f"SELECT set_config('app.current_organization_id', '{org_id}', true)"))
+        await session.execute(
+            text(f"SELECT set_config('app.current_organization_id', '{org_id}', true)")
+        )
         retrieval = RetrievalService(
             session=session,
             embedding_provider=embedding_provider,

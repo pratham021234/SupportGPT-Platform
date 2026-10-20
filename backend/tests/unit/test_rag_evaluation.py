@@ -12,7 +12,9 @@ from app.services.rag.evidence import CitationItem, EvidenceItem, GroundedAnswer
 
 def test_evaluation_metric_calculations():
     """Verify Recall@k, Reciprocal Rank, and citation validity calculations."""
-    evaluator = RAGEvaluator(embedding_provider="fastembed", embedding_model="BAAI/bge-small-en-v1.5")
+    evaluator = RAGEvaluator(
+        embedding_provider="fastembed", embedding_model="BAAI/bge-small-en-v1.5"
+    )
 
     doc_id = uuid.uuid4()
     chunk_1 = uuid.uuid4()

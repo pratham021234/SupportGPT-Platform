@@ -39,8 +39,19 @@ def test_qdrant_manager():
 
 
 @pytest.fixture
-async def rag_api_context(test_qdrant_manager) -> AsyncIterator[
-    tuple[AsyncClient, async_sessionmaker[AsyncSession], Organization, User, User, DocumentService, DocumentWorker, QdrantStoreManager]
+async def rag_api_context(
+    test_qdrant_manager,
+) -> AsyncIterator[
+    tuple[
+        AsyncClient,
+        async_sessionmaker[AsyncSession],
+        Organization,
+        User,
+        User,
+        DocumentService,
+        DocumentWorker,
+        QdrantStoreManager,
+    ]
 ]:
     """Test fixture with an active organization, users, and pre-indexed knowledge base."""
     engine = create_async_engine("sqlite+aiosqlite:///:memory:", echo=False)
@@ -68,16 +79,32 @@ async def rag_api_context(test_qdrant_manager) -> AsyncIterator[
         await db.flush()
 
         pwd = hash_password("Pass123!Safe")
-        admin = User(email="admin@saas.com", password_hash=pwd, display_name="Admin", status=UserStatus.ACTIVE)
-        agent = User(email="agent@saas.com", password_hash=pwd, display_name="Agent", status=UserStatus.ACTIVE)
+        admin = User(
+            email="admin@saas.com",
+            password_hash=pwd,
+            display_name="Admin",
+            status=UserStatus.ACTIVE,
+        )
+        agent = User(
+            email="agent@saas.com",
+            password_hash=pwd,
+            display_name="Agent",
+            status=UserStatus.ACTIVE,
+        )
         db.add_all([admin, agent])
         await db.flush()
 
         mem_admin = OrganizationMembership(
-            organization_id=org.id, user_id=admin.id, role=MembershipRole.ADMIN, status=MembershipStatus.ACTIVE
+            organization_id=org.id,
+            user_id=admin.id,
+            role=MembershipRole.ADMIN,
+            status=MembershipStatus.ACTIVE,
         )
         mem_agent = OrganizationMembership(
-            organization_id=org.id, user_id=agent.id, role=MembershipRole.AGENT, status=MembershipStatus.ACTIVE
+            organization_id=org.id,
+            user_id=agent.id,
+            role=MembershipRole.AGENT,
+            status=MembershipStatus.ACTIVE,
         )
         db.add_all([mem_admin, mem_agent])
         await db.commit()
@@ -93,7 +120,16 @@ async def rag_api_context(test_qdrant_manager) -> AsyncIterator[
     async with AsyncClient(transport=transport, base_url="http://testserver") as client:
         async with session_factory() as db:
             doc_service = DocumentService(db)
-            yield client, session_factory, org, admin, agent, doc_service, worker, test_qdrant_manager
+            yield (
+                client,
+                session_factory,
+                org,
+                admin,
+                agent,
+                doc_service,
+                worker,
+                test_qdrant_manager,
+            )
 
     app.dependency_overrides.clear()
     await engine.dispose()

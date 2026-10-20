@@ -10,7 +10,9 @@ class KnowledgeBaseCreate(BaseModel):
     """Payload to create a new organization knowledge collection."""
 
     name: str = Field(..., min_length=1, max_length=255, description="Collection name")
-    description: str | None = Field(default=None, max_length=2000, description="Collection description")
+    description: str | None = Field(
+        default=None, max_length=2000, description="Collection description"
+    )
     config: dict = Field(default_factory=dict, description="Processing configuration")
 
 
@@ -136,8 +138,12 @@ class KnowledgeSearchRequest(BaseModel):
     """Search request against organization knowledge base collections."""
 
     query: str = Field(..., min_length=2, max_length=2000, description="Search query string")
-    top_k: int = Field(default=5, ge=1, le=20, description="Maximum number of evidence chunks to retrieve")
-    min_score: float | None = Field(default=None, ge=0.0, le=1.0, description="Minimum relevance score threshold")
+    top_k: int = Field(
+        default=5, ge=1, le=20, description="Maximum number of evidence chunks to retrieve"
+    )
+    min_score: float | None = Field(
+        default=None, ge=0.0, le=1.0, description="Minimum relevance score threshold"
+    )
     enable_hybrid: bool = Field(default=True, description="Enable hybrid vector + full-text search")
 
 
@@ -173,7 +179,9 @@ class KnowledgeAnswerRequest(BaseModel):
 
     question: str = Field(..., min_length=2, max_length=2000, description="User question to answer")
     top_k: int = Field(default=5, ge=1, le=20, description="Maximum evidence items to use")
-    min_score: float | None = Field(default=None, ge=0.0, le=1.0, description="Minimum relevance score threshold")
+    min_score: float | None = Field(
+        default=None, ge=0.0, le=1.0, description="Minimum relevance score threshold"
+    )
     enable_hybrid: bool = Field(default=True, description="Enable hybrid vector + full-text search")
 
 
@@ -204,4 +212,3 @@ class KnowledgeAnswerResponse(BaseModel):
     retrieval_latency_ms: float
     generation_latency_ms: float
     total_latency_ms: float
-

@@ -92,12 +92,16 @@ def validate_document_file(content_bytes: bytes, filename: str) -> tuple[str, st
 
                 # Ensure it is a valid OpenXML Word document
                 namelist = zf.namelist()
-                if "word/document.xml" not in namelist and not any(n.startswith("word/") for n in namelist):
+                if "word/document.xml" not in namelist and not any(
+                    n.startswith("word/") for n in namelist
+                ):
                     raise UnsupportedMediaTypeException(
                         "Invalid DOCX file: missing standard Word OpenXML document structure."
                     )
         except zipfile.BadZipFile:
-            raise UnsupportedMediaTypeException("Invalid DOCX file: corrupted ZIP archive.") from None
+            raise UnsupportedMediaTypeException(
+                "Invalid DOCX file: corrupted ZIP archive."
+            ) from None
 
         return DocumentMediaType.DOCX, clean_filename
 
@@ -123,9 +127,13 @@ def validate_document_file(content_bytes: bytes, filename: str) -> tuple[str, st
                         "Text file contains excessive binary control characters."
                     )
             except Exception:
-                raise UnsupportedMediaTypeException("Unable to decode text document encoding.") from None
+                raise UnsupportedMediaTypeException(
+                    "Unable to decode text document encoding."
+                ) from None
 
-        media_type = DocumentMediaType.MARKDOWN if suffix in (".md", ".markdown") else DocumentMediaType.TXT
+        media_type = (
+            DocumentMediaType.MARKDOWN if suffix in (".md", ".markdown") else DocumentMediaType.TXT
+        )
         return media_type, clean_filename
 
     raise UnsupportedMediaTypeException("Unsupported or unrecognized document format.")
