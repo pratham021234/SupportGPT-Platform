@@ -35,7 +35,7 @@ def run_database_backup(
     retention_days: int = 14,
     custom_filename: str | None = None,
     db_url_override: str | None = None,
-    enable_row_security: bool = False,
+    enable_row_security: bool = True,
 ) -> dict:
     """Execute consistent database backup and generate integrity verification."""
     os.makedirs(backup_dir, exist_ok=True)
@@ -49,7 +49,9 @@ def run_database_backup(
     # Normalize url
     parsed = urlparse(db_url.replace("+asyncpg", ""))
 
-    logger.info("Starting database backup for database '%s' into %s", parsed.path.lstrip("/"), backup_path)
+    logger.info(
+        "Starting database backup for database '%s' into %s", parsed.path.lstrip("/"), backup_path
+    )
 
     pg_dump_bin = shutil.which("pg_dump")
 
@@ -61,12 +63,18 @@ def run_database_backup(
 
         cmd = [
             pg_dump_bin,
-            "-h", parsed.hostname or "localhost",
-            "-p", str(parsed.port or 5432),
-            "-U", parsed.username or "postgres",
-            "-d", parsed.path.lstrip("/"),
-            "-F", "c",  # Custom format (compressed and suitable for pg_restore)
-            "-f", backup_path,
+            "-h",
+            parsed.hostname or "localhost",
+            "-p",
+            str(parsed.port or 5432),
+            "-U",
+            parsed.username or "postgres",
+            "-d",
+            parsed.path.lstrip("/"),
+            "-F",
+            "c",  # Custom format (compressed and suitable for pg_restore)
+            "-f",
+            backup_path,
         ]
         if enable_row_security:
             cmd.append("--enable-row-security")
@@ -112,7 +120,12 @@ def run_database_backup(
     with open(metadata_path, "w", encoding="utf-8") as f:
         json.dump(metadata, f, indent=2)
 
-    logger.info("Backup created successfully: %s (Size: %d bytes, SHA256: %s)", backup_path, file_size_bytes, sha256_hash)
+    logger.info(
+        "Backup created successfully: %s (Size: %d bytes, SHA256: %s)",
+        backup_path,
+        file_size_bytes,
+        sha256_hash,
+    )
 
     # Enforce retention policy
     prune_old_backups(backup_dir, retention_days)
@@ -147,8 +160,21 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="SupportGPT Database Backup Utility")
     parser.add_argument("--backup-dir", default="backups", help="Directory to store backups")
     parser.add_argument("--retention-days", type=int, default=14, help="Retention period in days")
-    parser.add_argument("--db-url", default=None, help="Database connection URL override (e.g. backup user)")
-    parser.add_argument("--enable-row-security", action="store_true", help="Pass --enable-row-security to pg_dump")
+    parser.add_argument(
+        "--db-url", default=None, help="Database connection URL override (e.g. backup user)"
+    )
+    parser.add_argument(
+        "--enable-row-security",
+        action="store_true",
+        default=True,
+        help="Pass --enable-row-security to pg_dump (default: True)",
+    )
+    parser.add_argument(
+        "--no-row-security",
+        dest="enable_row_security",
+        action="store_false",
+        help="Disable --enable-row-security flag in pg_dump",
+    )
     args = parser.parse_args()
 
     try:

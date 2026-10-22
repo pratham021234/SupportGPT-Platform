@@ -16,15 +16,16 @@ import statistics
 import time
 from datetime import UTC, datetime
 
+from sqlalchemy import text
+
 from app.core.config import settings
 from app.core.logging import get_logger
 from app.core.security import hash_password, verify_password
 from app.db.session import async_session_factory
 from app.services.chunking import HierarchicalStructuralChunker
+from app.services.rag.embedding import get_embedding_provider
 from app.services.verification.claim_extractor import ClaimExtractor
 from app.services.verification.policy_evaluator import PolicyEvaluator
-from app.services.rag.embedding import get_embedding_provider
-from sqlalchemy import text
 
 logger = get_logger("supportgpt.baseline")
 
@@ -87,7 +88,8 @@ def benchmark_password_hashing(iterations: int = 5) -> dict:
 
 def benchmark_chunking_throughput(iterations: int = 20) -> dict:
     """Measure document chunking and hierarchy extraction throughput."""
-    sample_markdown = """# Enterprise Knowledge Base Policy
+    sample_markdown = (
+        """# Enterprise Knowledge Base Policy
 ## Section 1: Refund Policy
 Customers are eligible for a 30-day money-back guarantee for unused software licenses.
 Refund requests must be accompanied by the original transaction identifier and account email.
@@ -102,7 +104,9 @@ Severity 1 incidents trigger immediate on-call escalation and real-time status p
 All customer message data is retained for 90 days following ticket resolution.
 GDPR erasure requests are processed asynchronously within 14 calendar days.
 Database backups are encrypted at rest with AES-256 and stored across redundant availability zones.
-""" * 5
+"""
+        * 5
+    )
 
     total_chars = len(sample_markdown)
     chunker = HierarchicalStructuralChunker(chunk_size=400, chunk_overlap=50)
@@ -144,7 +148,7 @@ async def benchmark_embedding_latency(iterations: int = 10) -> dict:
 
     for _ in range(iterations):
         t0 = time.perf_counter()
-        vectors = await provider.embed_texts(sample_queries)
+        _vectors = await provider.embed_texts(sample_queries)
         latencies.append((time.perf_counter() - t0) * 1000)
 
     return {
@@ -175,8 +179,10 @@ def benchmark_claim_extraction_and_policy(iterations: int = 20) -> dict:
 
     for _ in range(iterations):
         t0 = time.perf_counter()
-        claims = extractor.extract_claims(sample_draft)
-        findings = evaluator.evaluate_policies(draft_text=sample_draft, claim_results=[], policies=[])
+        _claims = extractor.extract_claims(sample_draft)
+        _findings = evaluator.evaluate_policies(
+            draft_text=sample_draft, claim_results=[], policies=[]
+        )
         latencies.append((time.perf_counter() - t0) * 1000)
 
     return {
@@ -230,7 +236,9 @@ async def run_full_baseline(output_file: str | None = None) -> dict:
 def main() -> None:
     """CLI entrypoint."""
     parser = argparse.ArgumentParser(description="SupportGPT Performance Baseline Benchmark")
-    parser.add_argument("--output", default="performance_baseline.json", help="Output JSON filepath")
+    parser.add_argument(
+        "--output", default="performance_baseline.json", help="Output JSON filepath"
+    )
     args = parser.parse_args()
 
     res = asyncio.run(run_full_baseline(output_file=args.output))

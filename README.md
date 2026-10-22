@@ -184,6 +184,9 @@ cmd /c npm run build
 - [Architecture & Standards](docs/ARCHITECTURE.md): Layer boundaries, request flows, and architectural invariants.
 - [Development Guide](docs/DEVELOPMENT.md): Detailed workflow, PowerShell execution policies, and migration guides.
 - [Security Architecture](docs/SECURITY.md): Active protections, production validation, and future security milestones.
+- [Threat Model & Security](docs/THREAT_MODEL.md): STRIDE threat analysis, trust zones, and AI security defenses.
+- [Deployment & Operations Runbook](docs/DEPLOYMENT_RUNBOOK.md): Container orchestration, advisory-locked migrations, provisioning, and smoke testing.
+- [Disaster Recovery Plan](docs/DISASTER_RECOVERY.md): RPO/RTO objectives, verified database restoration, and Qdrant vector reconstruction.
 - [Testing & Quality Gates](docs/TESTING.md): Test categories, execution rules, and current test results.
 - [Phased Product Roadmap](docs/ROADMAP.md): Detailed milestones for Phases 00 through 09.
 - [ADR 0001: Modular Monolith](docs/adr/0001-modular-monolith-architecture.md)
@@ -197,4 +200,5 @@ cmd /c npm run build
 - [ADR 0009: Evidence-Grounded Retrieval and Answering Foundation](docs/adr/0009-evidence-grounded-retrieval-and-answering.md)
 - [ADR 0010: AI Response Verification, Policy Enforcement and Human Approval](docs/adr/0010-ai-response-verification-and-approval.md)
 - [ADR 0011: AI Observability, Benchmark Evaluations, Failure Investigations and Reliability](docs/adr/0011-ai-observability-evaluation-and-reliability.md)
+- [ADR 0012: Enterprise Readiness, Deployment Architecture & Production Operations](docs/adr/0012-enterprise-readiness-deployment-and-production-operations.md)
 

@@ -2,6 +2,7 @@
 
 import os
 import tempfile
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -202,7 +203,9 @@ class TestBackupAndRestoreIntegrity:
 
             checksum_file = f"{backup_file}.sha256"
             with open(checksum_file, "w", encoding="utf-8") as f:
-                f.write("0000000000000000000000000000000000000000000000000000000000000000  test_backup.dump\n")
+                f.write(
+                    "0000000000000000000000000000000000000000000000000000000000000000  test_backup.dump\n"
+                )
 
             with pytest.raises(ValueError, match="Integrity verification failure"):
                 verify_backup_integrity(backup_file)

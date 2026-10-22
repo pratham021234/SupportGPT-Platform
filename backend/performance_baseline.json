@@ -1,33 +1,33 @@
 {
-  "timestamp": "2026-10-22T09:08:07.435263+00:00",
+  "timestamp": "2026-10-22T10:34:16.044134+00:00",
   "environment": "development",
   "app_name": "SupportGPT-AI",
   "app_version": "0.1.0",
   "benchmarks": {
     "database_query": {
       "iterations": 50,
-      "mean_ms": 2.48,
-      "min_ms": 1.16,
-      "max_ms": 56.62,
-      "p50_ms": 1.25,
-      "p95_ms": 1.88,
-      "p99_ms": 56.62
+      "mean_ms": 2.93,
+      "min_ms": 1.42,
+      "max_ms": 60.11,
+      "p50_ms": 1.82,
+      "p95_ms": 2.29,
+      "p99_ms": 60.11
     },
     "password_hashing": {
       "iterations": 5,
-      "hash_mean_ms": 96.34,
-      "hash_p50_ms": 93.93,
-      "verify_mean_ms": 97.45,
-      "verify_p50_ms": 98.07
+      "hash_mean_ms": 93.15,
+      "hash_p50_ms": 93.84,
+      "verify_mean_ms": 90.96,
+      "verify_p50_ms": 90.13
     },
     "document_chunking": {
       "iterations": 20,
       "document_chars": 4670,
       "chunks_generated": 15,
-      "mean_latency_ms": 0.39,
-      "p50_ms": 0.29,
-      "p95_ms": 0.69,
-      "throughput_kb_per_sec": 11711.72
+      "mean_latency_ms": 0.29,
+      "p50_ms": 0.27,
+      "p95_ms": 0.66,
+      "throughput_kb_per_sec": 15778.25
     },
     "embedding_generation": {
       "provider": "FastEmbedEmbeddingProvider",
@@ -35,16 +35,16 @@
       "dimensions": 384,
       "batch_size": 4,
       "iterations": 10,
-      "mean_batch_ms": 145.99,
-      "p50_ms": 41.97,
-      "p95_ms": 1085.05,
-      "per_query_ms": 36.5
+      "mean_batch_ms": 101.38,
+      "p50_ms": 41.21,
+      "p95_ms": 643.37,
+      "per_query_ms": 25.34
     },
     "claim_and_policy": {
       "iterations": 20,
-      "mean_latency_ms": 2.76,
-      "p50_ms": 0.27,
-      "p95_ms": 48.94
+      "mean_latency_ms": 3.13,
+      "p50_ms": 0.35,
+      "p95_ms": 55.92
     }
   }
 }

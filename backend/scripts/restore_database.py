@@ -84,10 +84,14 @@ def run_database_restore(
 
         cmd = [
             pg_restore_bin,
-            "-h", parsed.hostname or "localhost",
-            "-p", str(parsed.port or 5432),
-            "-U", parsed.username or "postgres",
-            "-d", target_db,
+            "-h",
+            parsed.hostname or "localhost",
+            "-p",
+            str(parsed.port or 5432),
+            "-U",
+            parsed.username or "postgres",
+            "-d",
+            target_db,
             "--clean",  # Drop database objects prior to recreating them
             "--if-exists",
             backup_path,
@@ -124,8 +128,12 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="SupportGPT Database Restoration Utility")
     parser.add_argument("backup_file", help="Path to backup file (.sql or custom)")
     parser.add_argument("--target-db", help="Target database name (defaults to current settings)")
-    parser.add_argument("--db-url", help="Database connection URL override (e.g. admin or restore user)")
-    parser.add_argument("--verify-only", action="store_true", help="Verify checksum without restoring")
+    parser.add_argument(
+        "--db-url", help="Database connection URL override (e.g. admin or restore user)"
+    )
+    parser.add_argument(
+        "--verify-only", action="store_true", help="Verify checksum without restoring"
+    )
     args = parser.parse_args()
 
     try:

@@ -104,7 +104,9 @@ def upgrade() -> None:
             nullable=False,
             index=True,
         ),
-        sa.Column("investigation_id", sa.String(length=32), nullable=False, unique=True, index=True),
+        sa.Column(
+            "investigation_id", sa.String(length=32), nullable=False, unique=True, index=True
+        ),
         sa.Column("fingerprint", sa.String(length=64), nullable=False, index=True),
         sa.Column(
             "failure_category",
@@ -258,9 +260,7 @@ def upgrade() -> None:
             "is_provider_reported", sa.Boolean(), nullable=False, server_default=sa.text("false")
         ),
         sa.Column("estimated_cost_usd", sa.Float(), nullable=False, server_default="0.0"),
-        sa.Column(
-            "pricing_tier", sa.String(length=64), nullable=False, server_default="standard"
-        ),
+        sa.Column("pricing_tier", sa.String(length=64), nullable=False, server_default="standard"),
         sa.Column(
             "created_at",
             sa.DateTime(timezone=True),

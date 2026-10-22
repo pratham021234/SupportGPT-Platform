@@ -66,7 +66,12 @@ async def reconstruct_vector_indexes(batch_size: int = 50) -> dict:
         for i in range(0, total_chunks, batch_size):
             batch = chunks[i : i + batch_size]
             texts = [c.content for c in batch]
-            logger.info("Embedding batch %d-%d of %d...", i + 1, min(i + batch_size, total_chunks), total_chunks)
+            logger.info(
+                "Embedding batch %d-%d of %d...",
+                i + 1,
+                min(i + batch_size, total_chunks),
+                total_chunks,
+            )
 
             # Generate dense embeddings
             vectors = await provider.embed_texts(texts)
@@ -76,7 +81,11 @@ async def reconstruct_vector_indexes(batch_size: int = 50) -> dict:
             store.upsert_chunks(chunks_with_vectors)
             reindexed_count += len(chunks_with_vectors)
 
-    logger.info("Vector re-indexing completed successfully: %d / %d chunks indexed.", reindexed_count, total_chunks)
+    logger.info(
+        "Vector re-indexing completed successfully: %d / %d chunks indexed.",
+        reindexed_count,
+        total_chunks,
+    )
     return {
         "status": "completed",
         "total_chunks": total_chunks,

@@ -7,11 +7,11 @@ import asyncio
 import os
 import sys
 
-from alembic import command
 from alembic.config import Config
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine
 
+from alembic import command
 from app.core.config import settings
 from app.core.logging import get_logger
 
@@ -34,9 +34,7 @@ async def run_coordinated_migrations() -> None:
         engine = create_async_engine(db_url, isolation_level="AUTOCOMMIT")
         async with engine.connect() as conn:
             logger.info("Acquiring PostgreSQL advisory lock %d...", MIGRATION_ADVISORY_LOCK_ID)
-            await conn.execute(
-                text(f"SELECT pg_advisory_lock({MIGRATION_ADVISORY_LOCK_ID});")
-            )
+            await conn.execute(text(f"SELECT pg_advisory_lock({MIGRATION_ADVISORY_LOCK_ID});"))
             logger.info("Advisory lock acquired. Executing Alembic upgrade head...")
 
             try:

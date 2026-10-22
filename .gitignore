@@ -64,6 +64,9 @@ redis_data/
 qdrant_data/
 storage_data/
 backend/storage_data/
+backups/
+backend/backups/
+*.dump
 *.db
 *.sqlite3
 

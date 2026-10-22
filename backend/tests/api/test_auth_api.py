@@ -214,7 +214,9 @@ async def test_logout_and_session_invalidation(auth_test_context: tuple[AsyncCli
 
 
 @pytest.mark.asyncio
-async def test_login_rate_limiting_repeated_failures(auth_test_context: tuple[AsyncClient, AsyncSession]):
+async def test_login_rate_limiting_repeated_failures(
+    auth_test_context: tuple[AsyncClient, AsyncSession],
+):
     """Verify repeated failed logins trigger HTTP 429 RateLimitExceededException."""
     client, _ = auth_test_context
     from app.core.rate_limiter import rate_limiter
