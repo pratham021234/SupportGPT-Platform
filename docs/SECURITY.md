@@ -192,27 +192,62 @@ Retrieved document content is untrusted user-supplied data that may contain mali
 - All lifecycle events (`draft_created`, `draft_revised`, `verification_completed`, `approval_requested`, `approval_granted`, `approval_rejected`, `revision_requested`, `approval_invalidated`, `policy_toggled`) are durably recorded in `verification_audit_events`.
 - Tenant-scoped audit logs prevent tampering or unauthorized deletion.
 
+### E. Append-Only Audit Trail
+- All lifecycle events (`draft_created`, `draft_revised`, `verification_completed`, `approval_requested`, `approval_granted`, `approval_rejected`, `revision_requested`, `approval_invalidated`, `policy_toggled`) are durably recorded in `verification_audit_events`.
+- Tenant-scoped audit logs prevent tampering or unauthorized deletion.
+
 ---
 
-## 9. Security Boundary & Planned Milestones
+## 9. AI Observability, Redaction & Reliability Security (Phase 08)
+
+SupportGPT AI enforces privacy-preserving observability, centralized pre-emission redaction, and strict multi-tenant boundary isolation across all diagnostic, tracing, investigation, and evaluation pipelines.
+
+### A. Centralized Pre-Emission Redaction
+All log streams and forensic records pass through `backend/app/core/logging.py:redact_sensitive_data` before serialization or external emission:
+1. **Key-Name Scrubbing:** Recursively scrubs dictionary keys: `password`, `token`, `secret`, `authorization`, `api_key`, `access_token`, `refresh_token`, `cookie`, `credit_card`, `ssn`.
+2. **Regex Pattern Redaction:** Employs compiled patterns targeting:
+   - Bearer Authentication Tokens (`Bearer [REDACTED_TOKEN]`)
+   - OpenAI API Keys (`[REDACTED_API_KEY]`)
+   - RFC 7519 JSON Web Tokens (`[REDACTED_JWT]`)
+   - Database Connection URIs (`[REDACTED_DB_CREDENTIALS]`)
+   - Payment Card Account Numbers (`[REDACTED_CARD]`)
+   - Social Security Numbers (`[REDACTED_SSN]`)
+3. **Structured Trace Sanitization:** Raw user prompts, unredacted customer messages, and internal secrets are excluded from `AIOperationTrace.audit_metadata`. Only authorized entity references (e.g. `ticket_id`, `draft_id`, `document_id`) are retained.
+
+### B. Multi-Tenant Observability Isolation
+- PostgreSQL Row-Level Security (`FORCE ROW LEVEL SECURITY`) is applied to all observability tables:
+  - `ai_operation_traces`
+  - `failure_investigations`
+  - `evaluation_run_records`
+  - `ai_token_usage_records`
+- Cross-tenant investigation queries, trace lookups, and evaluation comparisons are rejected at the database and API layers with HTTP 403 Forbidden or 404 Not Found.
+
+### C. Role-Based Diagnostic Access
+- **`OBSERVABILITY_READ`**: Granted to `admin`, `team_lead`, and `agent` to inspect system diagnostics, execution traces, investigation hypotheses, and benchmark results.
+- **`OBSERVABILITY_MANAGE`**: Restricted to `admin` and `team_lead` to transition failure investigation statuses, record resolution notes, and execute benchmark evaluation runs.
+
+---
+
+## 10. Security Boundary & Planned Milestones
 
 | Security Milestone | Status | Description |
 |---|---|---|
-| **Multi-Tenant Row-Level Security (RLS)** | **Active (Phase 02–07)** | PostgreSQL RLS policies enforcing tenant isolation across tickets, events, sources, knowledge bases, documents, chunks, drafts, verification runs, policies, approvals, and audit events. |
+| **Multi-Tenant Row-Level Security (RLS)** | **Active (Phase 02–08)** | PostgreSQL RLS policies enforcing tenant isolation across tickets, events, sources, knowledge bases, documents, chunks, drafts, verification runs, policies, approvals, traces, investigations, evaluations, and usage records. |
 | **Authentication & RBAC** | **Active (Phase 02)** | Argon2id password hashing, server-side revocable sessions, organization memberships, and role-based access control. |
 | **Ticket & Conversation Authorization** | **Active (Phase 03)** | Direct-ID attack resistance, OCC conflict prevention, author impersonation blocks, and atomic event audit trails. |
 | **Inbound Webhook Verification & Secrets** | **Active (Phase 04)** | Cryptographic signature validation (HMAC-SHA256), replay protection, AES-CTR secret encryption, and idempotent event processing. |
 | **Safe Storage & Document Processing** | **Active (Phase 05)** | Path traversal guards, magic byte verification, zip bomb limits, and deterministic chunk provenance. |
 | **Vector Store Tenant Isolation & Injection Defense** | **Active (Phase 06)** | Dual-layer tenant isolation (Qdrant payload filters + PostgreSQL RLS), XML boundary sanitization, citation verification, and automated abstention. |
 | **Response Verification & Separation of Duties** | **Active (Phase 07)** | Claim-level evidence grounding, deterministic policy rules, exact version binding, separation of duties, and append-only audit trails. |
-| **Outbound Dispatch & External Actions** | Phase 08 | Authorization and rate-limiting for external ticketing write operations, email delivery, and customer messaging. |
-| **PII Redaction & Sanitization** | Phase 09 | Automated masking of customer Personally Identifiable Information in forensic trace logs. |
+| **Observability Redaction & Tenant Isolation** | **Active (Phase 08)** | Pre-emission multi-pattern secret redaction, RLS-backed execution traces, deduplicated failure investigations, non-blocking diagnostics, and cost accounting. |
+| **Outbound Dispatch & External Actions** | Phase 09 | Authorization and rate-limiting for external ticketing write operations, email delivery, and customer messaging. |
 
 ---
 
-## 10. Vulnerability Reporting
+## 11. Vulnerability Reporting
 For vulnerability disclosures and security findings, contact:  
 `security@supportgpt.ai`
+
 
 
 

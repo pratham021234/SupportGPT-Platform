@@ -267,9 +267,71 @@ async def verify_response_draft(
     policy_res = await session.execute(policy_stmt)
     policies = list(policy_res.scalars().all())
 
-    # 3. Execute pipeline
-    pipeline = ResponseVerificationPipeline()
-    result = await pipeline.verify_draft(draft, policies)
+    # 3. Execute pipeline with distributed execution tracing
+    from app.models.enums import AIOperationType, FailureCategory
+    from app.services.observability.investigation_service import InvestigationService
+    from app.services.observability.tracer import AITracer
+    from app.services.observability.usage_service import UsageAccountingService
+
+    async with AITracer.start_trace(
+        session=session,
+        organization_id=org_ctx.organization_id,
+        operation_type=AIOperationType.RESPONSE_VERIFICATION.value,
+        provider="deterministic",
+        model="rules-v1",
+        user_id=org_ctx.user.id,
+        entity_type="draft",
+        entity_id=draft.id,
+        pipeline_version="v1.0.0",
+    ) as trace:
+        pipeline = ResponseVerificationPipeline()
+        async with trace.span("verification_pipeline"):
+            result = await pipeline.verify_draft(draft, policies)
+
+        trace.evidence_count = len(draft.evidence_references or [])
+        claim_tokens = sum(len(c.claim_text.split()) for c in result.claim_results) * 2
+        trace.set_tokens(input_tokens=claim_tokens, output_tokens=0, embedding_tokens=0)
+
+        if result.status == VerificationStatus.BLOCKED:
+            failed_rules = result.machine_readable_findings.get("failed_policies", [])
+            trace.record_blocked(f"Blocked by policy or contradiction: {failed_rules}")
+            await InvestigationService.record_failure(
+                session=session,
+                organization_id=org_ctx.organization_id,
+                error=f"Draft v{draft.version_number} verification blocked: {failed_rules}",
+                category=FailureCategory.POLICY_VIOLATION.value,
+                severity=result.risk_level.value,
+                trace_id=trace.trace_id,
+                entity_type="draft",
+                entity_id=draft.id,
+            )
+        elif result.status == VerificationStatus.FAILED:
+            trace.record_failure(
+                FailureCategory.VERIFICATION_FAILURE.value,
+                result.error_message or "Verification failed",
+            )
+            await InvestigationService.record_failure(
+                session=session,
+                organization_id=org_ctx.organization_id,
+                error=result.error_message or "Verification failed",
+                category=FailureCategory.VERIFICATION_FAILURE.value,
+                severity=result.risk_level.value,
+                trace_id=trace.trace_id,
+                entity_type="draft",
+                entity_id=draft.id,
+            )
+
+        # Record usage
+        await UsageAccountingService.record_usage(
+            session=session,
+            organization_id=org_ctx.organization_id,
+            operation_type=AIOperationType.RESPONSE_VERIFICATION.value,
+            provider="deterministic",
+            model="rules-v1",
+            input_tokens=claim_tokens,
+            output_tokens=0,
+            trace_id=trace.trace_id,
+        )
 
     # 4. Determine policy set version
     policy_version = max([p.version_number for p in policies], default=1)

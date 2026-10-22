@@ -478,22 +478,77 @@ async def answer_organization_knowledge(
     context: Annotated[OrganizationContext, Depends(require_permission(Permission.KNOWLEDGE_READ))],
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> KnowledgeAnswerResponse:
-    retrieval_service = RetrievalService(db)
-    evidence, retrieval_latency_ms = await retrieval_service.retrieve(
-        query=payload.question,
-        organization_id=context.organization.id,
-        knowledge_base_ids=None,
-        top_k=payload.top_k,
-        min_score=payload.min_score,
-        enable_hybrid=payload.enable_hybrid,
-    )
+    from app.core.config import settings
+    from app.models.enums import AIOperationType, FailureCategory
+    from app.services.observability.investigation_service import InvestigationService
+    from app.services.observability.tracer import AITracer
+    from app.services.observability.usage_service import UsageAccountingService
 
-    answer_service = GroundedAnswerService()
-    result = await answer_service.generate_answer(
-        question=payload.question,
-        evidence=evidence,
-        retrieval_latency_ms=retrieval_latency_ms,
-    )
+    async with AITracer.start_trace(
+        session=db,
+        organization_id=context.organization.id,
+        operation_type=AIOperationType.ANSWER_GENERATION.value,
+        provider=settings.EMBEDDING_PROVIDER,
+        model=settings.AI_MODEL_NAME,
+        user_id=context.user.id,
+    ) as trace:
+        retrieval_service = RetrievalService(db)
+        async with trace.span("knowledge_retrieval"):
+            evidence, retrieval_latency_ms = await retrieval_service.retrieve(
+                query=payload.question,
+                organization_id=context.organization.id,
+                knowledge_base_ids=None,
+                top_k=payload.top_k,
+                min_score=payload.min_score,
+                enable_hybrid=payload.enable_hybrid,
+            )
+        trace.evidence_count = len(evidence)
+
+        answer_service = GroundedAnswerService()
+        async with trace.span("llm_generation"):
+            result = await answer_service.generate_answer(
+                question=payload.question,
+                evidence=evidence,
+                retrieval_latency_ms=retrieval_latency_ms,
+            )
+
+        prompt_tokens = len(payload.question.split()) * 2 + sum(
+            len(ev.relevant_excerpt.split()) for ev in evidence
+        )
+        completion_tokens = len(result.answer.split()) * 2
+        cost, _ = UsageAccountingService.calculate_cost(
+            provider="openai",
+            model=settings.AI_MODEL_NAME,
+            input_tokens=prompt_tokens,
+            output_tokens=completion_tokens,
+        )
+        trace.set_tokens(
+            input_tokens=prompt_tokens,
+            output_tokens=completion_tokens,
+            estimated_cost_usd=cost,
+        )
+
+        if result.abstention_status:
+            trace.record_abstention(result.abstention_reason or "Insufficient evidence to answer")
+            await InvestigationService.record_failure(
+                session=db,
+                organization_id=context.organization.id,
+                error=result.abstention_reason or "Answer abstained due to lack of evidence",
+                category=FailureCategory.NO_RELEVANT_EVIDENCE.value,
+                severity="low",
+                trace_id=trace.trace_id,
+            )
+
+        await UsageAccountingService.record_usage(
+            session=db,
+            organization_id=context.organization.id,
+            operation_type=AIOperationType.ANSWER_GENERATION.value,
+            provider="openai",
+            model=settings.AI_MODEL_NAME,
+            input_tokens=prompt_tokens,
+            output_tokens=completion_tokens,
+            trace_id=trace.trace_id,
+        )
 
     return KnowledgeAnswerResponse(
         question=result.question,

@@ -425,4 +425,215 @@ export interface VerificationAuditEvent {
   created_at: string;
 }
 
+// ==========================================
+// Phase 08: Observability, Evaluations & Investigations
+// ==========================================
+
+export type AIOperationType =
+  | "query_embedding"
+  | "evidence_retrieval"
+  | "answer_generation"
+  | "citation_validation"
+  | "response_verification"
+  | "policy_evaluation"
+  | "document_indexing"
+  | "benchmark_evaluation";
+
+export type TraceOutcome = "success" | "abstained" | "blocked" | "failed" | "timed_out";
+
+export type FailureCategory =
+  | "configuration_error"
+  | "authentication_error"
+  | "authorization_error"
+  | "input_validation_error"
+  | "embedding_failure"
+  | "retrieval_failure"
+  | "no_relevant_evidence"
+  | "generation_failure"
+  | "citation_validation_failure"
+  | "verification_failure"
+  | "policy_violation"
+  | "approval_conflict"
+  | "document_processing_failure"
+  | "indexing_failure"
+  | "database_failure"
+  | "queue_failure"
+  | "unknown_error";
+
+export type InvestigationStatus =
+  | "open"
+  | "investigating"
+  | "mitigated"
+  | "resolved"
+  | "false_positive";
+
+export type EvaluationStatus = "running" | "completed" | "failed" | "aborted";
+
+export interface ExecutionSpan {
+  name: string;
+  stage: string;
+  start_ms: number;
+  duration_ms: number;
+  outcome: string;
+  metadata: Record<string, unknown>;
+  error?: string | null;
+}
+
+export interface TraceSummary {
+  id: string;
+  trace_id: string;
+  request_id?: string | null;
+  operation_type: AIOperationType;
+  provider_name?: string | null;
+  model_name?: string | null;
+  outcome: TraceOutcome;
+  total_duration_ms: number;
+  retrieved_evidence_count: number;
+  input_tokens: number;
+  output_tokens: number;
+  total_tokens: number;
+  estimated_cost_usd: number;
+  is_abstained: boolean;
+  is_blocked: boolean;
+  created_at: string;
+}
+
+export interface TraceDetail extends TraceSummary {
+  spans: ExecutionSpan[];
+  error_category?: FailureCategory | null;
+  error_message?: string | null;
+  pipeline_version: string;
+  policy_version: string;
+  pricing_tier_version: string;
+  ticket_id?: string | null;
+  draft_id?: string | null;
+  verification_run_id?: string | null;
+  approval_request_id?: string | null;
+  document_id?: string | null;
+  audit_metadata: Record<string, unknown>;
+  completed_at?: string | null;
+}
+
+export interface FailureInvestigation {
+  id: string;
+  fingerprint: string;
+  failure_category: FailureCategory;
+  severity: "critical" | "high" | "medium" | "low";
+  status: InvestigationStatus;
+  first_seen_at: string;
+  last_seen_at: string;
+  occurrence_count: number;
+  sanitized_error_summary: string;
+  provider_name?: string | null;
+  model_name?: string | null;
+  pipeline_version: string;
+  diagnostic_hypotheses: Array<{
+    category: string;
+    hypothesis: string;
+    confidence: "high" | "medium" | "low";
+    suggested_remediation: string;
+  }>;
+  resolution_notes?: string | null;
+  assigned_operator_id?: string | null;
+  related_trace_id?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface EvaluationRunRecord {
+  id: string;
+  dataset_id: string;
+  dataset_version: string;
+  dataset_size: number;
+  embedding_model: string;
+  generation_model: string;
+  status: EvaluationStatus;
+  recall_at_k: number;
+  mean_reciprocal_rank: number;
+  citation_validity_rate: number;
+  evidence_groundedness_rate: number;
+  abstention_accuracy: number;
+  failed_cases_count: number;
+  execution_duration_ms: number;
+  has_regression: boolean;
+  regression_notes?: string | null;
+  created_at: string;
+}
+
+export interface EvaluationComparison {
+  current_run_id: string;
+  baseline_run_id: string;
+  current_metrics: Record<string, number>;
+  baseline_metrics: Record<string, number>;
+  deltas: Record<string, number>;
+  has_regression: boolean;
+  regression_threshold_pct: number;
+  regression_findings: string[];
+}
+
+export interface UsageSummary {
+  organization_id: string;
+  total_requests: number;
+  total_input_tokens: number;
+  total_output_tokens: number;
+  total_tokens: number;
+  total_cost_usd: number;
+  actual_reported_tokens: number;
+  estimated_tokens: number;
+  by_model: Record<
+    string,
+    {
+      requests: number;
+      input_tokens: number;
+      output_tokens: number;
+      total_tokens: number;
+      cost_usd: number;
+    }
+  >;
+  by_operation: Record<
+    string,
+    {
+      requests: number;
+      input_tokens: number;
+      output_tokens: number;
+      total_tokens: number;
+      cost_usd: number;
+    }
+  >;
+}
+
+export interface SystemDiagnostics {
+  app_name: string;
+  version: string;
+  environment: string;
+  timestamp: string;
+  status: "healthy" | "degraded";
+  dependencies: {
+    postgres: { status: string; latency_ms: number; error: string | null };
+    redis: { status: string; latency_ms: number; error: string | null };
+    qdrant: { status: string; latency_ms: number; collections?: string[]; error: string | null };
+  };
+  workers: {
+    ingestion_worker: { enabled: boolean; poll_interval_seconds: number; batch_size: number };
+    document_worker: { enabled: boolean; poll_interval_seconds: number; batch_size: number };
+  };
+  ai_providers: {
+    embedding: {
+      provider: string;
+      model: string;
+      dimensions?: number;
+      status: string;
+      initialization_latency_ms?: number;
+      error?: string | null;
+    };
+    llm: {
+      provider: string;
+      model: string;
+      max_tokens: number;
+      pricing_tier: string;
+      status: string;
+    };
+  };
+}
+
 

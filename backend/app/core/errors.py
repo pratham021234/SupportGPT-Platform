@@ -303,6 +303,33 @@ class PolicyNotFoundException(AppException):
         )
 
 
+class TraceNotFoundException(AppException):
+    def __init__(self, trace_id: str) -> None:
+        super().__init__(
+            message=f"Execution trace '{trace_id}' was not found in this organization.",
+            code="TRACE_NOT_FOUND",
+            status_code=status.HTTP_404_NOT_FOUND,
+        )
+
+
+class InvestigationNotFoundException(AppException):
+    def __init__(self, investigation_id: str) -> None:
+        super().__init__(
+            message=f"Failure investigation '{investigation_id}' was not found in this organization.",
+            code="INVESTIGATION_NOT_FOUND",
+            status_code=status.HTTP_404_NOT_FOUND,
+        )
+
+
+class EvaluationRunNotFoundException(AppException):
+    def __init__(self, run_id: str) -> None:
+        super().__init__(
+            message=f"Evaluation benchmark run '{run_id}' was not found in this organization.",
+            code="EVALUATION_RUN_NOT_FOUND",
+            status_code=status.HTTP_404_NOT_FOUND,
+        )
+
+
 def register_error_handlers(app: FastAPI) -> None:
     """Register uniform RFC 7807/structured error handlers with the FastAPI application."""
 

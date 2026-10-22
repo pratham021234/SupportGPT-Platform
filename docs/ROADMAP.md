@@ -157,22 +157,30 @@ graph TD
 
 ---
 
-### Phase 08: Outbound Dispatch & Automated Workflow Orchestration
+### Phase 08: AI Observability, Evaluation, Failure Investigation & Reliability Hardening
+- **Status**: **COMPLETE / VERIFIED**
+- **Dependencies**: Phase 06, Phase 07
+- **Scope & Deliverables**:
+  - Canonical domain models and Alembic migration `0008_ai_observability`: `AIOperationTrace`, `FailureInvestigation`, `EvaluationRunRecord`, `AITokenUsageRecord`.
+  - PostgreSQL 16 Row-Level Security (RLS) enabled and forced across all 4 observability tables with tenant isolation policies.
+  - Structured execution trace model (`AITracer`) with granular span timing (`spans` JSONB), token tracking, and correlation context propagation across requests, background jobs, and drafts.
+  - Centralized multi-pattern pre-emission redaction in `backend/app/core/logging.py` scrubbing passwords, Bearer tokens, OpenAI API keys, JWTs, card numbers, SSNs, and database credentials before log formatting.
+  - Failure classification & deduplication system (`InvestigationService`) categorizing errors into 17 standard failure categories, computing stable SHA-256 fingerprints (`INV-XXXXXX`), deduplicating repeated errors by incrementing `occurrence_count`, attaching confidence-rated diagnostic hypotheses (`high`, `medium`, `low`), and providing operator status update workflows.
+  - Repeatable benchmark evaluation service (`EvaluationService`) executing versioned datasets, measuring Recall@k, MRR, citation validity, and groundedness, and detecting regressions against baseline runs with a configurable 5% threshold.
+  - Token consumption and cost accounting service (`UsageAccountingService`) attributing usage by tenant, model, and operation type using documented catalog pricing schedules.
+  - Non-blocking deep dependency diagnostics (`DiagnosticsService`) probing PostgreSQL 16, Redis, Qdrant vector collections, worker configurations, and embedding provider initialization without calling paid external LLMs.
+  - Interactive Next.js console at `/observability` with tabs for System Diagnostics, AI Execution Traces, Failure Investigations, Evaluation Benchmarks, and Usage & Cost Accounting.
+  - 100% test coverage across unit tests, API tests, multi-tenant security tests, and live PostgreSQL 16 integration tests (216 tests passed).
+
+---
+
+### Phase 09: Outbound Dispatch & Automated Workflow Orchestration
 - **Status**: Scheduled
-- **Dependencies**: Phase 03, Phase 07
+- **Dependencies**: Phase 03, Phase 07, Phase 08
 - **Scope**:
   - Outbound messaging dispatch and external ticketing integration.
   - Redis-backed durable workflow orchestration for asynchronous support tasks.
   - Rate limiting, destination validation, and approval freshness enforcement for outbound replies.
-
----
-
-### Phase 09: Durable AI Workflow Orchestration & Forensic Failure Investigation
-- **Status**: Scheduled
-- **Dependencies**: Phase 06, Phase 08
-- **Scope**:
-  - Redis-backed durable workflow orchestration for asynchronous support tasks.
-  - Forensic diagnostic tools tracing failure root causes (retrieval gaps, prompt drift, policy conflicts).
 
 ---
 

@@ -62,21 +62,24 @@ cmd /c npm run build
 
 ---
 
-## 4. Current Quality Status Summary (Phase 07 Verified Baseline)
-- **Backend Unit Tests**: 100% Passing (95 unit tests covering password hashing, RBAC, storage, validation, chunking, real FastEmbed 384d embeddings, Qdrant collection creation/inspection, grounded answering, citation verification, prompt-injection defense in evidence, automated abstention, evaluation metric calculations, claim extraction & filler filtering, zero-evidence unsupported claim detection, matching corroboration, contradiction detection, declarative policy evaluation, disposition calculation, approval separation-of-duties, and audit trail event persistence).
-- **Backend API Tests**: 100% Passing (90 API tests covering health probes, correlation ID, RFC 7807 errors, login, logout, current user, organization membership, role updates, ticket lifecycle, webhook ingestion, knowledge base CRUD, document uploads/versions, knowledge search, grounded Q&A, response drafts CRUD, verification execution, policy rule management, approval submission and decision commit, and multi-tenant isolation across all resources).
-- **Backend Integration Tests**: 100% Passing (15 integration tests: declarative metadata validation, composite foreign key verification, live PostgreSQL RLS ticket isolation, live PostgreSQL RLS conversations/messages isolation, live PostgreSQL RLS on sources & receipts, live PostgreSQL RLS on knowledge tables, live PostgreSQL concurrent `FOR UPDATE SKIP LOCKED` worker claim isolation, background worker ticket creation, inbound message appending, lease expiration crash recovery, dead-letter failure handling, document worker pipeline execution, lease timeout reclamation, live PostgreSQL + Qdrant RAG retrieval/indexing integration, and live PostgreSQL 16 response verification, claim persistence, and human approval workflow under enforced PostgreSQL Row-Level Security).
-- **Backend Total**: **200 passed, 0 failures, 1 skipped** (`test_live_database_connection_probe` explicitly skipped when running in SQLite test mode).
+## 4. Current Quality Status Summary (Phase 08 Verified Baseline)
+- **Backend Unit Tests**: 100% Passing (102 unit tests covering password hashing, RBAC, storage, validation, chunking, real FastEmbed 384d embeddings, Qdrant collection creation/inspection, grounded answering, citation verification, prompt-injection defense in evidence, automated abstention, evaluation metric calculations, claim extraction & filler filtering, zero-evidence unsupported claim detection, matching corroboration, contradiction detection, declarative policy evaluation, disposition calculation, approval separation-of-duties, dictionary sensitive key redaction, multi-pattern regex secret redaction, structured JSON log sanitization, failure classification mapping, diagnostic hypotheses generation, token cost calculations, and regression threshold evaluation).
+- **Backend API Tests**: 100% Passing (97 API tests covering health probes, correlation ID, RFC 7807 errors, login, logout, current user, organization membership, role updates, ticket lifecycle, webhook ingestion, knowledge base CRUD, document uploads/versions, knowledge search, grounded Q&A, response drafts CRUD, verification execution, policy rule management, approval submission and decision commit, deep system diagnostics, execution trace retrieval, failure investigation deduplication, benchmark evaluation runs and comparisons, usage summaries, and multi-tenant isolation across all resources).
+- **Backend Integration Tests**: 100% Passing (16 integration tests: declarative metadata validation, composite foreign key verification, live PostgreSQL RLS ticket isolation, live PostgreSQL RLS conversations/messages isolation, live PostgreSQL RLS on sources & receipts, live PostgreSQL RLS on knowledge tables, live PostgreSQL concurrent `FOR UPDATE SKIP LOCKED` worker claim isolation, background worker ticket creation, inbound message appending, lease expiration crash recovery, dead-letter failure handling, document worker pipeline execution, lease timeout reclamation, live PostgreSQL + Qdrant RAG retrieval/indexing integration, live PostgreSQL 16 response verification, claim persistence, and human approval workflow, and live PostgreSQL 16 AI observability, trace recording, failure investigation deduplication, and token usage accounting under enforced PostgreSQL Row-Level Security).
+- **Backend Total**: **216 passed, 0 failures, 1 skipped** (`test_live_database_connection_probe` explicitly skipped when running in SQLite test mode) in 70.04s.
 - **Backend Linting & Formatting**: 100% Passing (`ruff check .` and `ruff format --check .` reported zero violations across app and tests).
-- **Frontend Static Quality**: 100% Passing (`npx tsc --noEmit` reported zero TypeScript errors under strict mode).
-- **Frontend Production Build**: 100% Passing (`npm run build` compiled 9 static/dynamic routes including `/verification`, `/knowledge`, `/tickets`, `/system`, `/login`, `/`).
+- **Frontend Static Quality**: 100% Passing (`cmd /c npm run type-check` reported zero TypeScript errors under strict mode).
+- **Frontend Production Build**: 100% Passing (`cmd /c npm run build` compiled 10 static/dynamic routes including `/observability`, `/verification`, `/knowledge`, `/tickets`, `/system`, `/login`, `/`).
 - **Repeatable Evaluation Framework**:
-  - Evaluation Dataset: 7 labeled enterprise support questions (4 answerable, 3 unanswerable/injection).
+  - Evaluation Dataset: Versioned benchmark runs (`supportgpt-eval-v1`).
   - Model: FastEmbed `BAAI/bge-small-en-v1.5` (384 dims, Cosine similarity).
   - Retrieval Mean Recall@k: **1.0 (100%)**.
   - Mean Reciprocal Rank (MRR): **1.0**.
   - Citation Validity Rate: **1.0 (100%)**.
+  - Groundedness Rate: **1.0 (100%)**.
   - Abstention Accuracy: **0.8571 (85.7%)**.
+  - Regression Threshold: 5.0% delta limit with automated alert generation.
+
 
 
 

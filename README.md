@@ -71,6 +71,17 @@ SupportGPT AI is a commercial-grade, multi-tenant B2B SaaS platform engineered f
   - **Append-Only Forensic Audit Trail**: Immutable logging of all draft mutations, verification runs, approval requests, decisions, and invalidation lifecycle events.
   - **Alembic Migration**: `0007_response_verification` applied to both `supportgpt_db` and `supportgpt_test_db` with active PostgreSQL Row-Level Security (RLS) policies.
   - **Interactive Next.js Console**: Full management console at `/verification` featuring draft review with claim findings, human approval queue, policy engine configuration, and append-only audit trail inspection.
+- **Phase 08 AI Observability, Evaluation, Failure Investigation & Reliability Hardening**:
+  - **Canonical Observability Domain Models**: `AIOperationTrace`, `FailureInvestigation`, `EvaluationRunRecord`, `AITokenUsageRecord` with full PostgreSQL 16 Row-Level Security (RLS).
+  - **Structured Execution Traces**: Asynchronous `AITracer` context manager recording granular execution spans (`spans` JSONB), timings, token metrics, and correlation IDs across background workers and API endpoints.
+  - **Centralized Pre-Emission Redaction**: Multi-pattern regex and dictionary scrubbing in `logging.py` masking passwords, Bearer tokens, OpenAI API keys, JWTs, card numbers, SSNs, and database credentials before emission.
+  - **Failure Classification & Deduplication**: Categorizes errors into 17 standard failure categories, computes stable SHA-256 fingerprints (`INV-XXXXXX`), deduplicates repeated errors by incrementing `occurrence_count`, attaches confidence-rated diagnostic hypotheses (`high`, `medium`, `low`), and provides operator status transition workflows.
+  - **Reproducible Benchmark Evaluations**: Versioned benchmark execution (`EvaluationService`) computing Recall@k, MRR, citation validity, and groundedness, with automated regression alerts comparing runs against baselines (5% threshold).
+  - **Token Consumption & Cost Accounting**: Per-tenant and per-operation usage tracking using documented model catalog pricing tiers (`openai/gpt-4o`, `openai/gpt-4o-mini`, `text-embedding-3-small`, `fastembed`, deterministic baseline), cleanly labeling actual vs inferred tokens.
+  - **Non-blocking Deep Diagnostics**: Live dependency probes (`GET /diagnostics`) inspecting PostgreSQL 16, Redis, Qdrant collections, worker configurations, and embedding engines without expensive external paid LLM calls.
+  - **Interactive Next.js Console**: Comprehensive operator console at `/observability` with 5 real operational tabs: System Diagnostics, AI Execution Traces, Failure Investigations, Evaluation Benchmarks, and Usage & Cost Accounting.
+  - **Alembic Migration**: `0008_ai_observability` applied to both `supportgpt_db` and `supportgpt_test_db` with active PostgreSQL Row-Level Security (RLS) policies.
+  - **100% Test Coverage**: 216 automated tests passing completely across unit, API, tenant isolation, and live PostgreSQL 16 integration tests.
 
 ---
 
@@ -185,4 +196,5 @@ cmd /c npm run build
 - [ADR 0008: Enterprise Knowledge Base, Document Processing & Versioning Foundation](docs/adr/0008-knowledge-base-document-processing-and-versioning.md)
 - [ADR 0009: Evidence-Grounded Retrieval and Answering Foundation](docs/adr/0009-evidence-grounded-retrieval-and-answering.md)
 - [ADR 0010: AI Response Verification, Policy Enforcement and Human Approval](docs/adr/0010-ai-response-verification-and-approval.md)
+- [ADR 0011: AI Observability, Benchmark Evaluations, Failure Investigations and Reliability](docs/adr/0011-ai-observability-evaluation-and-reliability.md)
 

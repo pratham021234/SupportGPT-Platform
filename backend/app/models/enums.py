@@ -324,3 +324,52 @@ class VerificationAuditEventType(StrEnum):
     APPROVAL_REJECTED = "approval_rejected"
     REVISION_REQUESTED = "revision_requested"
     APPROVAL_INVALIDATED = "approval_invalidated"
+
+
+class AIOperationType(StrEnum):
+    RAG_QUERY = "rag_query"
+    ANSWER_GENERATION = "answer_generation"
+    RESPONSE_VERIFICATION = "response_verification"
+    CLAIM_GROUNDING = "claim_grounding"
+    DOCUMENT_INDEXING = "document_indexing"
+    POLICY_EVALUATION = "policy_evaluation"
+
+
+class TraceOutcome(StrEnum):
+    SUCCESS = "success"
+    FAILURE = "failure"
+    ABSTAINED = "abstained"
+    BLOCKED = "blocked"
+
+
+class FailureCategory(StrEnum):
+    CONFIGURATION_ERROR = "configuration_error"
+    AUTHENTICATION_ERROR = "authentication_error"
+    AUTHORIZATION_ERROR = "authorization_error"
+    INPUT_VALIDATION_ERROR = "input_validation_error"
+    EMBEDDING_FAILURE = "embedding_failure"
+    RETRIEVAL_FAILURE = "retrieval_failure"
+    NO_RELEVANT_EVIDENCE = "no_relevant_evidence"
+    GENERATION_FAILURE = "generation_failure"
+    CITATION_VALIDATION_FAILURE = "citation_validation_failure"
+    VERIFICATION_FAILURE = "verification_failure"
+    POLICY_VIOLATION = "policy_violation"
+    APPROVAL_CONFLICT = "approval_conflict"
+    DOCUMENT_PROCESSING_FAILURE = "document_processing_failure"
+    INDEXING_FAILURE = "indexing_failure"
+    DATABASE_FAILURE = "database_failure"
+    QUEUE_FAILURE = "queue_failure"
+    UNKNOWN_ERROR = "unknown_error"
+
+
+class InvestigationStatus(StrEnum):
+    OPEN = "open"
+    INVESTIGATING = "investigating"
+    RESOLVED = "resolved"
+    IGNORED = "ignored"
+
+
+class EvaluationStatus(StrEnum):
+    RUNNING = "running"
+    COMPLETED = "completed"
+    FAILED = "failed"

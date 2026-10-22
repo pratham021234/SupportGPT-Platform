@@ -9,6 +9,7 @@ from app.api.v1.health import router as health_router
 from app.api.v1.ingestion import diagnostics_router as ingestion_diagnostics_router
 from app.api.v1.ingestion import router as ingestion_router
 from app.api.v1.knowledge import router as knowledge_router
+from app.api.v1.observability import router as observability_router
 from app.api.v1.organizations import router as organizations_router
 from app.api.v1.sources import router as sources_router
 from app.api.v1.system import router as system_router
@@ -32,3 +33,4 @@ api_v1_router.include_router(ingestion_router)
 api_v1_router.include_router(ingestion_diagnostics_router)
 api_v1_router.include_router(knowledge_router)
 api_v1_router.include_router(verification_router)
+api_v1_router.include_router(observability_router)

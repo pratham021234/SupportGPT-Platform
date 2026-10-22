@@ -38,6 +38,10 @@ class Permission(StrEnum):
     VERIFICATION_APPROVE = "verification:approve"
     POLICIES_MANAGE = "policies:manage"
 
+    # AI Observability, Traces, Investigations & Evaluation (Phase 08)
+    OBSERVABILITY_READ = "observability:read"
+    OBSERVABILITY_MANAGE = "observability:manage"
+
 
 # Explicit Role-Permission Matrix (Least Privilege)
 ROLE_PERMISSIONS: dict[MembershipRole, set[Permission]] = {
@@ -62,6 +66,8 @@ ROLE_PERMISSIONS: dict[MembershipRole, set[Permission]] = {
         Permission.VERIFICATION_WRITE,
         Permission.VERIFICATION_APPROVE,
         Permission.POLICIES_MANAGE,
+        Permission.OBSERVABILITY_READ,
+        Permission.OBSERVABILITY_MANAGE,
     },
     MembershipRole.ADMIN: {
         Permission.ORG_READ,
@@ -84,6 +90,8 @@ ROLE_PERMISSIONS: dict[MembershipRole, set[Permission]] = {
         Permission.VERIFICATION_WRITE,
         Permission.VERIFICATION_APPROVE,
         Permission.POLICIES_MANAGE,
+        Permission.OBSERVABILITY_READ,
+        Permission.OBSERVABILITY_MANAGE,
     },
     MembershipRole.AGENT: {
         Permission.ORG_READ,
@@ -99,6 +107,7 @@ ROLE_PERMISSIONS: dict[MembershipRole, set[Permission]] = {
         Permission.VERIFICATION_READ,
         Permission.VERIFICATION_WRITE,
         Permission.VERIFICATION_APPROVE,
+        Permission.OBSERVABILITY_READ,
     },
     MembershipRole.VIEWER: {
         Permission.ORG_READ,
@@ -106,6 +115,7 @@ ROLE_PERMISSIONS: dict[MembershipRole, set[Permission]] = {
         Permission.CUSTOMERS_READ,
         Permission.KNOWLEDGE_READ,
         Permission.VERIFICATION_READ,
+        Permission.OBSERVABILITY_READ,
     },
 }
 

@@ -6,7 +6,6 @@ import {
   ShieldCheck,
   Inbox,
   BookOpen,
-  AlertOctagon,
   BarChart3,
   Settings,
   Layers,
@@ -78,16 +77,10 @@ export function AppSidebar() {
               badge={{ text: "Phase 07", variant: "success" }}
             />
             <NavigationItem
-              label="Failure Investigation"
-              href="/modules/investigation"
-              icon={<AlertOctagon className="w-4 h-4" />}
-              badge={{ text: "Phase 07", variant: "neutral" }}
-            />
-            <NavigationItem
-              label="AI Evaluation"
-              href="/modules/analytics"
+              label="Observability & Reliability"
+              href="/observability"
               icon={<BarChart3 className="w-4 h-4" />}
-              badge={{ text: "Phase 08", variant: "neutral" }}
+              badge={{ text: "Phase 08", variant: "success" }}
             />
           </div>
         </div>

@@ -506,12 +506,95 @@ graph TD
 
 ---
 
-## 12. Known Limitations & Deferred Work
+## 12. AI Observability, Benchmark Evaluations, Failure Investigations & Reliability (Phase 08)
+
+SupportGPT AI provides an auditable observability, evaluation, failure investigation, and cost accounting layer built directly upon actual application events and verified database records.
+
+### 12.1 Four Operational Pillars
+The system strictly distinguishes four concepts without data duplication:
+- **Logs:** Structured RFC 5424 JSON logs with centralized pre-emission redaction (`StructuredJsonFormatter`), propagating `request_id`, `trace_id`, and `organization_id` context variables.
+- **Metrics:** Real execution counters, span latencies, retrieval document counts, and token tallies computed directly from database records.
+- **Traces:** Logical operation records (`AIOperationTrace`) storing execution stage spans (`spans` JSONB array), token counts, estimated costs, and correlation references.
+- **Investigations:** Deduplicated failure records (`FailureInvestigation`) grouping recurrent errors under stable SHA-256 fingerprints (`INV-XXXXXX`) with diagnostic hypotheses and resolution workflows.
+
+```mermaid
+graph TD
+    Op["AI Operation (e.g. Answer Gen / Verification)"] --> Tracer["AITracer Context Manager"]
+    Tracer --> Spans["Execution Spans (Embedding, Retrieval, LLM, Verification)"]
+    Spans --> TraceRec["AIOperationTrace (PostgreSQL 16 RLS)"]
+    
+    Op -.->|On Failure / Error| InvService["InvestigationService"]
+    InvService --> Classify["Failure Classification (17 Standard Categories)"]
+    Classify --> Hash["Stable Fingerprint Hashing (SHA-256)"]
+    Hash --> Dedupe["Deduplication & Counter Increment"]
+    Dedupe --> Hypo["Diagnostic Hypotheses & Remediation Generation"]
+    Hypo --> InvRec["FailureInvestigation (PostgreSQL 16 RLS)"]
+    
+    Op --> UsageService["UsageAccountingService"]
+    UsageService --> ModelRates["Authoritative Pricing Catalog"]
+    ModelRates --> UsageRec["AITokenUsageRecord (PostgreSQL 16 RLS)"]
+```
+
+### 12.2 Centralized Pre-Emission Redaction
+Centralized in `backend/app/core/logging.py`, `redact_sensitive_data` recursively filters payloads before they reach log formatters or storage:
+- **Key-Based Redaction:** Automatically masks case-insensitive sensitive keys: `password`, `token`, `secret`, `authorization`, `api_key`, `access_token`, `refresh_token`, `cookie`, `credit_card`, `ssn`.
+- **String Pattern Redaction:** Applies high-precision regular expressions detecting:
+  - `Bearer [A-Za-z0-9_\-\.]+` &rarr; `Bearer [REDACTED_TOKEN]`
+  - `sk-[A-Za-z0-9]{20,}` / `sk-proj-[A-Za-z0-9_\-]{20,}` &rarr; `[REDACTED_API_KEY]`
+  - Standard JWTs (`eyJ...`) &rarr; `[REDACTED_JWT]`
+  - Database URI credentials (`postgres://user:pass@host...`) &rarr; `[REDACTED_DB_CREDENTIALS]`
+  - Payment Cards (13-16 digit Luhn formats) &rarr; `[REDACTED_CARD]`
+  - Social Security Numbers (`\d{3}-\d{2}-\d{4}`) &rarr; `[REDACTED_SSN]`
+
+### 12.3 Execution Trace Model (`AIOperationTrace`)
+AI operations wrap critical stages using the `AITracer` asynchronous context manager:
+- Spans record stage name, start offset, duration in milliseconds, outcome, error message, and stage-specific metadata.
+- Propagates correlation context across background jobs and database operations.
+- Execution traces persist safely without blocking business operations.
+- Captures timeouts, abstentions, and policy blocks accurately.
+
+### 12.4 Failure Classification, Fingerprinting & Hypotheses (`FailureInvestigation`)
+- **17 Standard Categories:** `configuration_error`, `authentication_error`, `authorization_error`, `input_validation_error`, `embedding_failure`, `retrieval_failure`, `no_relevant_evidence`, `generation_failure`, `citation_validation_failure`, `verification_failure`, `policy_violation`, `approval_conflict`, `document_processing_failure`, `indexing_failure`, `database_failure`, `queue_failure`, `unknown_error`.
+- **Stable Fingerprints:** SHA-256 hash of `(organization_id, category, provider, normalized_error_message[:120])` truncated to 6 uppercase hex characters: `INV-XXXXXX`.
+- **Automatic Deduplication:** Subsequent failures increment `occurrence_count` and update `last_seen_at`.
+- **Diagnostic Hypotheses:** Automatically attaches confidence-rated root-cause hypotheses (`high`, `medium`, `low`) and concrete remediation recommendations.
+- **Incident Lifecycle:** Operators can transition statuses (`open` &rarr; `investigating` &rarr; `mitigated` &rarr; `resolved` &rarr; `false_positive`) and record resolution notes.
+
+### 12.5 Reproducible Benchmark Evaluation & Regression Detection (`EvaluationRunRecord`)
+- Versioned evaluation runs store benchmark dataset metadata, configuration, execution duration, and measured metrics:
+  - `recall_at_k`: Fraction of queries where ground-truth reference chunk appears in top-k retrieved documents.
+  - `mean_reciprocal_rank` (MRR): Average reciprocal rank of the first relevant document.
+  - `citation_validity_rate`: Proportion of generated citation IDs matching retrieved document IDs.
+  - `evidence_groundedness_rate`: Proportion of claims grounded in retrieved evidence.
+  - `abstention_accuracy`: Proportion of unanswerable queries correctly abstained from.
+- **Regression Detection:** Comparing runs against baselines using a configurable tolerance threshold (default 5.0%). If metric delta exceeds tolerance, `has_regression` is set to `True` with structured alert findings.
+
+### 12.6 Token Usage & Cost Accounting (`AITokenUsageRecord`)
+- Authoritative `MODEL_PRICING_CATALOG` schedules:
+  - `openai/gpt-4o`: $5.00 / 1M input tokens, $15.00 / 1M output tokens.
+  - `openai/gpt-4o-mini`: $0.15 / 1M input tokens, $0.60 / 1M output tokens.
+  - `openai/text-embedding-3-small`: $0.02 / 1M tokens.
+  - `fastembed/BAAI/bge-small-en-v1.5`: $0.00 infrastructure baseline.
+  - `deterministic/rules`: $0.00 compute baseline.
+- Summaries report input, output, and total tokens, cost in USD, and explicitly distinguish provider-reported tokens from inferred approximations.
+
+### 12.7 Non-blocking System Diagnostics (`DiagnosticsService`)
+- Probes PostgreSQL 16 connection latency (`SELECT 1`).
+- Probes Redis queue connectivity and latency (`PING`).
+- Inspects Qdrant vector engine collections without expensive scans.
+- Inspects background worker loop configurations (polling intervals, batch sizes).
+- Inspects local embedding engine dimensions and initialization latency without calling external paid LLM APIs.
+
+---
+
+## 13. Known Limitations & Deferred Work
 1. **Optical Character Recognition (OCR)**: Scanned PDFs and image-only documents are flagged as `OCR_UNAVAILABLE`; OCR engine integration is deferred.
 2. **Multi-Node Cloud Object Storage**: S3/GCS-compatible object storage adapters are deferred; local filesystem storage is active for single-node deployments.
-3. **Automated Outbound Dispatch**: Automatic sending of customer emails, tickets, or messages is strictly prohibited in Phase 07.
+3. **Automated Outbound Dispatch**: Automatic sending of customer emails, tickets, or messages is strictly prohibited in Phase 08.
 4. **Autonomous External Actions**: Refund issuance, account mutations, payment changes, and external ticketing writes remain strictly out of scope.
 5. **Model Calibration**: Confidence scores reflect heuristic lexical overlap metrics rather than empirically calibrated probabilities.
+6. **External Alert Webhooks**: Outbound Slack/PagerDuty notification webhooks remain unconfigured; incidents are persisted locally in `FailureInvestigation`.
+
 
 
 

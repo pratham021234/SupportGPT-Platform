@@ -24,6 +24,13 @@ import type {
   PolicyRule,
   ApprovalRequest,
   VerificationAuditEvent,
+  SystemDiagnostics,
+  TraceSummary,
+  TraceDetail,
+  FailureInvestigation,
+  EvaluationRunRecord,
+  EvaluationComparison,
+  UsageSummary,
 } from "../types/api";
 
 export class ApiError extends Error {
@@ -412,6 +419,133 @@ export const apiClient = {
   async listAuditTrail(orgId: string, entityType?: string): Promise<{ items: VerificationAuditEvent[]; total: number }> {
     const qs = entityType ? `?entity_type=${entityType}` : "";
     return typedFetch<{ items: VerificationAuditEvent[]; total: number }>(`/api/v1/organizations/${orgId}/verification-audit${qs}`);
+  },
+
+  // ==========================================
+  // Phase 08: Observability, Diagnostics & Evaluations
+  // ==========================================
+
+  /**
+   * Deep system and dependency diagnostics (non-blocking, zero paid LLM calls)
+   */
+  async getDiagnostics(orgId: string): Promise<SystemDiagnostics> {
+    return typedFetch<SystemDiagnostics>(`/api/v1/organizations/${orgId}/observability/diagnostics`);
+  },
+
+  /**
+   * Query execution traces
+   */
+  async listTraces(
+    orgId: string,
+    params?: { operation_type?: string; outcome?: string; limit?: number; offset?: number }
+  ): Promise<{ items: TraceSummary[]; total: number }> {
+    const query = new URLSearchParams();
+    if (params?.operation_type) query.set("operation_type", params.operation_type);
+    if (params?.outcome) query.set("outcome", params.outcome);
+    if (params?.limit) query.set("limit", String(params.limit));
+    if (params?.offset) query.set("offset", String(params.offset));
+    const qs = query.toString() ? `?${query.toString()}` : "";
+    return typedFetch<{ items: TraceSummary[]; total: number }>(`/api/v1/organizations/${orgId}/observability/traces${qs}`);
+  },
+
+  /**
+   * Fetch single execution trace with spans and correlation metadata
+   */
+  async getTrace(orgId: string, traceId: string): Promise<TraceDetail> {
+    return typedFetch<TraceDetail>(`/api/v1/organizations/${orgId}/observability/traces/${traceId}`);
+  },
+
+  /**
+   * List deduplicated failure investigations
+   */
+  async listInvestigations(
+    orgId: string,
+    params?: { status?: string; category?: string; limit?: number; offset?: number }
+  ): Promise<{ items: FailureInvestigation[]; total: number }> {
+    const query = new URLSearchParams();
+    if (params?.status) query.set("status", params.status);
+    if (params?.category) query.set("category", params.category);
+    if (params?.limit) query.set("limit", String(params.limit));
+    if (params?.offset) query.set("offset", String(params.offset));
+    const qs = query.toString() ? `?${query.toString()}` : "";
+    return typedFetch<{ items: FailureInvestigation[]; total: number }>(`/api/v1/organizations/${orgId}/observability/investigations${qs}`);
+  },
+
+  /**
+   * Fetch a single failure investigation record
+   */
+  async getInvestigation(orgId: string, investigationId: string): Promise<FailureInvestigation> {
+    return typedFetch<FailureInvestigation>(`/api/v1/organizations/${orgId}/observability/investigations/${investigationId}`);
+  },
+
+  /**
+   * Update failure investigation status and resolution notes
+   */
+  async updateInvestigation(
+    orgId: string,
+    investigationId: string,
+    payload: { status?: string; resolution_notes?: string }
+  ): Promise<FailureInvestigation> {
+    return typedFetch<FailureInvestigation>(`/api/v1/organizations/${orgId}/observability/investigations/${investigationId}`, {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  /**
+   * List reproducible benchmark evaluation runs
+   */
+  async listEvaluations(
+    orgId: string,
+    datasetId?: string
+  ): Promise<{ items: EvaluationRunRecord[]; total: number }> {
+    const qs = datasetId ? `?dataset_id=${encodeURIComponent(datasetId)}` : "";
+    return typedFetch<{ items: EvaluationRunRecord[]; total: number }>(`/api/v1/organizations/${orgId}/observability/evaluations${qs}`);
+  },
+
+  /**
+   * Trigger a new benchmark evaluation run
+   */
+  async createEvaluationRun(
+    orgId: string,
+    payload: {
+      dataset_id: string;
+      dataset_version: string;
+      embedding_model?: string;
+      generation_model?: string;
+      regression_threshold_pct?: number;
+    }
+  ): Promise<EvaluationRunRecord> {
+    return typedFetch<EvaluationRunRecord>(`/api/v1/organizations/${orgId}/observability/evaluations`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  /**
+   * Compare two evaluation runs to assess regressions
+   */
+  async compareEvaluations(
+    orgId: string,
+    currentRunId: string,
+    baselineRunId: string,
+    thresholdPct: number = 5.0
+  ): Promise<EvaluationComparison> {
+    return typedFetch<EvaluationComparison>(`/api/v1/organizations/${orgId}/observability/evaluations/compare`, {
+      method: "POST",
+      body: JSON.stringify({
+        current_run_id: currentRunId,
+        baseline_run_id: baselineRunId,
+        regression_threshold_pct: thresholdPct,
+      }),
+    });
+  },
+
+  /**
+   * Get tenant usage summary with token consumption and cost breakdown
+   */
+  async getUsageSummary(orgId: string): Promise<UsageSummary> {
+    return typedFetch<UsageSummary>(`/api/v1/organizations/${orgId}/observability/usage`);
   },
 };
 

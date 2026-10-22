@@ -1,5 +1,7 @@
 """Model package exporting all authoritative domain and system models for SupportGPT AI."""
 
+from app.models.ai_operation_trace import AIOperationTrace
+from app.models.ai_token_usage import AITokenUsageRecord
 from app.models.approval_request import ApprovalRequest
 from app.models.attachment import Attachment
 from app.models.claim_finding import ClaimFinding
@@ -10,6 +12,7 @@ from app.models.document import Document
 from app.models.document_chunk import DocumentChunk
 from app.models.document_version import DocumentVersion
 from app.models.enums import (
+    AIOperationType,
     ApprovalDecisionType,
     ApprovalStatus,
     AttachmentScanStatus,
@@ -24,9 +27,12 @@ from app.models.enums import (
     DocumentProcessingStatus,
     DocumentSourceType,
     DraftLifecycleStatus,
+    EvaluationStatus,
+    FailureCategory,
     IdentityType,
     IdentityVerificationStatus,
     IngestionStatus,
+    InvestigationStatus,
     KnowledgeBaseStatus,
     MembershipRole,
     MembershipStatus,
@@ -42,12 +48,15 @@ from app.models.enums import (
     TicketEventType,
     TicketPriority,
     TicketStatus,
+    TraceOutcome,
     UserStatus,
     VerificationAuditEventType,
     VerificationStatus,
     can_transition_ticket_status,
 )
+from app.models.evaluation_run import EvaluationRunRecord
 from app.models.event_source import EventSource
+from app.models.failure_investigation import FailureInvestigation
 from app.models.foundation import SystemEventLog
 from app.models.ingestion_receipt import IngestionReceipt
 from app.models.knowledge_base import KnowledgeBase
@@ -104,6 +113,16 @@ __all__ = [
     "PolicyRule",
     "ApprovalRequest",
     "VerificationAuditEvent",
+    # Phase 08: AI Observability, Tracing, Investigations, Evaluations & Token Usage
+    "AIOperationTrace",
+    "FailureInvestigation",
+    "EvaluationRunRecord",
+    "AITokenUsageRecord",
+    "AIOperationType",
+    "TraceOutcome",
+    "FailureCategory",
+    "InvestigationStatus",
+    "EvaluationStatus",
     # Enums & Domain Rules
     "OrganizationStatus",
     "CustomerStatus",
