@@ -183,7 +183,10 @@ async def test_live_postgresql_concurrent_worker_skip_locked():
                     f"evt-conc-{i}",
                 )
 
-        # Worker 1 and Worker 2 claim concurrently in active transactions
+        # Worker 1 and Worker 2 claim concurrently in active transactions with explicit event synchronization
+        w1_locked = asyncio.Event()
+        w2_done = asyncio.Event()
+
         async def worker_1_claim():
             async with conn1.transaction():
                 await conn1.execute("SELECT set_config('app.is_system_admin', 'true', true);")
@@ -196,13 +199,15 @@ async def test_live_postgresql_concurrent_worker_skip_locked():
                     receipt_ids,
                 )
                 claimed = [r["id"] for r in rows]
-                # Hold transaction briefly so worker 2 attempts simultaneous claim
-                await asyncio.sleep(0.1)
+                # Signal worker 2 that worker 1 has acquired locks and is holding the transaction
+                w1_locked.set()
+                # Wait until worker 2 has completed its claim before committing transaction
+                await w2_done.wait()
                 return claimed
 
         async def worker_2_claim():
-            # Small delay to ensure worker 1 has opened transaction and acquired locks
-            await asyncio.sleep(0.02)
+            # Wait until worker 1 has acquired row locks inside active transaction
+            await w1_locked.wait()
             async with conn2.transaction():
                 await conn2.execute("SELECT set_config('app.is_system_admin', 'true', true);")
                 rows = await conn2.fetch(
@@ -213,7 +218,10 @@ async def test_live_postgresql_concurrent_worker_skip_locked():
                     "FOR UPDATE SKIP LOCKED;",
                     receipt_ids,
                 )
-                return [r["id"] for r in rows]
+                claimed = [r["id"] for r in rows]
+                # Signal worker 1 that claim is complete
+                w2_done.set()
+                return claimed
 
         w1_result, w2_result = await asyncio.gather(worker_1_claim(), worker_2_claim())
 

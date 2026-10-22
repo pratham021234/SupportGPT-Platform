@@ -14,7 +14,7 @@ from app.core.errors import (
     ResourceNotFoundException,
 )
 from app.core.logging import get_logger
-from app.db.tenant import TenantScopedQuery
+from app.db.tenant import TenantScopedQuery, set_tenant_rls_context
 from app.models.document import Document
 from app.models.document_chunk import DocumentChunk
 from app.models.document_version import DocumentVersion
@@ -76,6 +76,10 @@ class DocumentService:
         self.session.add(kb)
         try:
             await self.session.commit()
+            try:
+                await set_tenant_rls_context(self.session, organization_id)
+            except Exception:
+                pass
             await self.session.refresh(kb)
             return kb
         except IntegrityError as exc:
@@ -182,6 +186,10 @@ class DocumentService:
         self.session.add(version)
         try:
             await self.session.commit()
+            try:
+                await set_tenant_rls_context(self.session, organization_id)
+            except Exception:
+                pass
             await self.session.refresh(doc)
             await self.session.refresh(version)
             return doc, version
@@ -254,6 +262,10 @@ class DocumentService:
         self.session.add(new_version)
         try:
             await self.session.commit()
+            try:
+                await set_tenant_rls_context(self.session, organization_id)
+            except Exception:
+                pass
             await self.session.refresh(new_version)
             return new_version
         except Exception as exc:
@@ -306,6 +318,10 @@ class DocumentService:
         ver.error_summary = None
 
         await self.session.commit()
+        try:
+            await set_tenant_rls_context(self.session, organization_id)
+        except Exception:
+            pass
         await self.session.refresh(ver)
         return ver
 
@@ -321,6 +337,10 @@ class DocumentService:
         doc.lifecycle_status = DocumentLifecycleStatus.DELETED
         doc.deleted_at = datetime.now(UTC)
         await self.session.commit()
+        try:
+            await set_tenant_rls_context(self.session, organization_id)
+        except Exception:
+            pass
         await self.session.refresh(doc)
 
         # De-index vectors from Qdrant

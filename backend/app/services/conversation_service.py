@@ -13,6 +13,7 @@ from app.core.errors import (
 )
 from app.core.logging import get_logger
 from app.core.rbac import Permission
+from app.db.tenant import set_tenant_rls_context
 from app.models.attachment import Attachment
 from app.models.conversation import Conversation
 from app.models.enums import (
@@ -79,6 +80,10 @@ class ConversationService:
         session.add(conversation)
         if auto_commit:
             await session.commit()
+            try:
+                await set_tenant_rls_context(session, organization_id)
+            except Exception:
+                pass
             await session.refresh(conversation)
         else:
             await session.flush()
@@ -243,6 +248,10 @@ class ConversationService:
 
         if auto_commit:
             await session.commit()
+            try:
+                await set_tenant_rls_context(session, organization_id)
+            except Exception:
+                pass
             await session.refresh(message)
         else:
             await session.flush()

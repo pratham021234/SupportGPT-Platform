@@ -1,14 +1,12 @@
 "use client";
 
 import React, { useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { apiClient, ApiError } from "@/lib/api";
 import { ShieldCheck, Lock, Mail, AlertCircle, ArrowRight, CheckCircle2, Loader2, Building2 } from "lucide-react";
 import type { LoginResponse } from "@/types/api";
 
 export default function LoginPage() {
-  const router = useRouter();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -42,10 +40,10 @@ export default function LoginPage() {
 
       setAuthSuccess(response);
 
-      // Brief delay so operator sees success state before routing
+      // Full navigation so AppHeader and tenant context refresh with new session
       setTimeout(() => {
-        router.push("/");
-      }, 1200);
+        window.location.href = "/";
+      }, 800);
     } catch (err: unknown) {
       if (err instanceof ApiError) {
         setErrorMessage(err.message);

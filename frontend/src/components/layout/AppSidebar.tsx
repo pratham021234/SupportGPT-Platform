@@ -52,35 +52,35 @@ export function AppSidebar() {
           </div>
         </div>
 
-        {/* Core Product Roadmap Modules */}
+        {/* Core Operational Modules */}
         <div>
           <div className="px-3 mb-2 text-[11px] font-semibold tracking-wider text-slate-500 uppercase">
-            Planned Modules
+            Operations Console
           </div>
           <div className="space-y-1">
             <NavigationItem
               label="Support Inbox"
-              href="/modules/inbox"
+              href="/tickets"
               icon={<Inbox className="w-4 h-4" />}
-              badge={{ text: "Phase 03", variant: "neutral" }}
+              badge={{ text: "Active", variant: "success" }}
             />
             <NavigationItem
               label="Knowledge Engine"
               href="/knowledge"
               icon={<BookOpen className="w-4 h-4" />}
-              badge={{ text: "Phase 06", variant: "success" }}
+              badge={{ text: "Active", variant: "success" }}
             />
             <NavigationItem
               label="Response Verification"
               href="/verification"
               icon={<ShieldCheck className="w-4 h-4" />}
-              badge={{ text: "Phase 07", variant: "success" }}
+              badge={{ text: "Active", variant: "success" }}
             />
             <NavigationItem
               label="Observability & Reliability"
               href="/observability"
               icon={<BarChart3 className="w-4 h-4" />}
-              badge={{ text: "Phase 08", variant: "success" }}
+              badge={{ text: "Active", variant: "success" }}
             />
           </div>
         </div>
@@ -88,7 +88,7 @@ export function AppSidebar() {
         {/* Administration */}
         <div>
           <div className="px-3 mb-2 text-[11px] font-semibold tracking-wider text-slate-500 uppercase">
-            Administration
+            Architecture Specs
           </div>
           <div className="space-y-1">
             <NavigationItem

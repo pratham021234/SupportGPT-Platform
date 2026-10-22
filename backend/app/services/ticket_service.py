@@ -14,6 +14,7 @@ from app.core.errors import (
 )
 from app.core.logging import correlation_id_ctx, get_logger
 from app.core.rbac import Permission
+from app.db.tenant import set_tenant_rls_context
 from app.models.conversation import Conversation
 from app.models.customer import Customer
 from app.models.enums import (
@@ -171,6 +172,10 @@ class TicketService:
 
         if auto_commit:
             await session.commit()
+            try:
+                await set_tenant_rls_context(session, organization_id)
+            except Exception:
+                pass
             await session.refresh(ticket)
         else:
             await session.flush()
@@ -426,6 +431,10 @@ class TicketService:
                 session.add(ev)
             if auto_commit:
                 await session.commit()
+                try:
+                    await set_tenant_rls_context(session, organization_id)
+                except Exception:
+                    pass
                 await session.refresh(ticket)
             else:
                 await session.flush()
