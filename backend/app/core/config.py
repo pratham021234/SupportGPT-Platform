@@ -302,10 +302,20 @@ class Settings(BaseSettings):
                 raise ValueError(
                     "DATABASE_URL uses default development credentials which are forbidden in production."
                 )
+            if "postgres:postgres@" in self.DATABASE_URL or "admin:admin@" in self.DATABASE_URL:
+                raise ValueError(
+                    "DATABASE_URL uses weak default credentials ('postgres:postgres' or 'admin:admin') which are forbidden in production."
+                )
 
-            # 3. CORS origins must not allow wildcard in production
+            # 3. CORS origins must not allow wildcard or localhost in production
             if "*" in self.CORS_ORIGINS:
                 raise ValueError("Wildcard '*' CORS origin is forbidden in production.")
+            if self.ENVIRONMENT == "production":
+                for origin in self.CORS_ORIGINS:
+                    if "localhost" in origin or "127.0.0.1" in origin:
+                        raise ValueError(
+                            f"Localhost CORS origin '{origin}' is forbidden in production."
+                        )
 
             # 4. Session secret key must be custom and secure in production
             if "dev_session_secret_key" in self.SESSION_SECRET_KEY:
@@ -314,6 +324,30 @@ class Settings(BaseSettings):
                 )
             if len(self.SESSION_SECRET_KEY) < 32:
                 raise ValueError("SESSION_SECRET_KEY must be at least 32 characters in production.")
+
+            # 5. HTTPS session cookies required in production
+            if self.ENVIRONMENT == "production" and not self.SESSION_COOKIE_SECURE:
+                raise ValueError(
+                    "SESSION_COOKIE_SECURE must be True in production to ensure cookies are transmitted exclusively over TLS."
+                )
+
+            # 6. Webhook secrets encryption key required in production
+            if self.ENVIRONMENT == "production":
+                if not self.WEBHOOK_SECRETS_ENCRYPTION_KEY:
+                    raise ValueError(
+                        "WEBHOOK_SECRETS_ENCRYPTION_KEY must be configured in production for encrypting source credentials at rest."
+                    )
+                if len(self.WEBHOOK_SECRETS_ENCRYPTION_KEY) < 32:
+                    raise ValueError(
+                        "WEBHOOK_SECRETS_ENCRYPTION_KEY must be at least 32 characters long in production."
+                    )
+
+            # 7. External LLM API key validation in production
+            if self.ENVIRONMENT == "production" and self.LLM_PROVIDER in ("openai", "anthropic"):
+                if not self.LLM_API_KEY:
+                    raise ValueError(
+                        f"LLM_API_KEY must be set in production when LLM_PROVIDER is configured to '{self.LLM_PROVIDER}'."
+                    )
 
         return self
 

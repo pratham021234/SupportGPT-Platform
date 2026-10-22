@@ -20,6 +20,7 @@ router = APIRouter(tags=["Health & Diagnostics"])
     summary="Process Liveness Probe",
     description="Returns process liveness. Used by container orchestrators to detect process crashes.",
 )
+@router.get("/health", include_in_schema=False)
 async def liveness_probe() -> HealthStatusResponse:
     return HealthStatusResponse(
         status="ok",

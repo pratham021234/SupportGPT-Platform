@@ -39,3 +39,31 @@ class CorrelationIdMiddleware(BaseHTTPMiddleware):
             return response
         finally:
             correlation_id_ctx.reset(token)
+
+
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    """Middleware that injects production-grade HTTP security headers on all responses."""
+
+    def __init__(self, app: ASGIApp) -> None:
+        super().__init__(app)
+
+    async def dispatch(self, request: Request, call_next: Callable) -> Response:
+        response: Response = await call_next(request)
+
+        # Standard defense-in-depth security headers
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["Content-Security-Policy"] = (
+            "default-src 'self'; frame-ancestors 'none'; object-src 'none';"
+        )
+
+        from app.core.config import settings
+
+        if settings.ENVIRONMENT in ("production", "staging") or request.url.scheme == "https":
+            response.headers["Strict-Transport-Security"] = (
+                "max-age=63072000; includeSubDomains; preload"
+            )
+
+        return response

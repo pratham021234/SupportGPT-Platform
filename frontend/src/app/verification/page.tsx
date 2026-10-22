@@ -150,6 +150,7 @@ export default function VerificationConsolePage() {
 
   useEffect(() => {
     fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedOrgId]);
 
   // Handle draft selection

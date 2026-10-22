@@ -11,6 +11,7 @@ from app.core.config import settings
 from app.core.dependencies import extract_session_token, get_current_user
 from app.core.errors import AuthenticationException
 from app.core.logging import get_logger
+from app.core.rate_limiter import rate_limiter
 from app.core.security import (
     generate_session_token,
     hash_password,
@@ -53,9 +54,20 @@ async def login(
     db: AsyncSession = Depends(get_db_session),
 ) -> LoginResponse:
     """Authenticate via email and password, establishing an HttpOnly session."""
+    client_ip = request.client.host if request.client else "unknown"
+    rate_limit_key = f"login:{client_ip}"
+
+    # Enforce brute-force protection rate limit
+    await rate_limiter.check(
+        key=rate_limit_key,
+        max_attempts=settings.LOGIN_RATE_LIMIT_MAX_ATTEMPTS,
+        window_seconds=settings.LOGIN_RATE_LIMIT_WINDOW_SECONDS,
+    )
+
     try:
         normalized_email = normalize_email(login_data.email)
     except ValueError:
+        await rate_limiter.record_failure(rate_limit_key, settings.LOGIN_RATE_LIMIT_WINDOW_SECONDS)
         raise AuthenticationException("Invalid email or password.") from None
 
     # Query user by normalized email
@@ -70,16 +82,22 @@ async def login(
     if not user:
         # Constant-time dummy check to prevent email enumeration timing side-channels
         verify_password(login_data.password, _DUMMY_ARGON2_HASH)
+        await rate_limiter.record_failure(rate_limit_key, settings.LOGIN_RATE_LIMIT_WINDOW_SECONDS)
         logger.warning(f"Failed login attempt for nonexistent user: {normalized_email}")
         raise AuthenticationException("Invalid email or password.")
 
     if not verify_password(login_data.password, user.password_hash):
+        await rate_limiter.record_failure(rate_limit_key, settings.LOGIN_RATE_LIMIT_WINDOW_SECONDS)
         logger.warning(f"Invalid password attempt for user: {user.id}")
         raise AuthenticationException("Invalid email or password.")
 
     if user.status != UserStatus.ACTIVE:
+        await rate_limiter.record_failure(rate_limit_key, settings.LOGIN_RATE_LIMIT_WINDOW_SECONDS)
         logger.warning(f"Login denied for inactive user: {user.id} (status={user.status})")
         raise AuthenticationException("User account is inactive or disabled.")
+
+    # Successful authentication: reset rate limiter for this client
+    await rate_limiter.reset(rate_limit_key)
 
     # Rehash password if algorithm parameters have changed
     if needs_rehash(user.password_hash):

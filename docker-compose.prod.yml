@@ -1,0 +1,214 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: supportgpt-postgres-prod
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-supportgpt_db}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB:-supportgpt_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    networks:
+      - supportgpt-internal
+
+  redis:
+    image: redis:7-alpine
+    container_name: supportgpt-redis-prod
+    restart: always
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD}"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - supportgpt-internal
+
+  qdrant:
+    image: qdrant/qdrant:v1.12.0
+    container_name: supportgpt-qdrant-prod
+    restart: always
+    environment:
+      QDRANT__SERVICE__API_KEY: ${QDRANT_API_KEY:-}
+    volumes:
+      - qdrant_data:/qdrant/storage
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/6333 && echo -e \"GET /readyz HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n\" >&3 && cat <&3 | grep \"HTTP/1.1 200 OK\"' || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    networks:
+      - supportgpt-internal
+
+  migration:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: supportgpt-migration-prod
+    command: ["python", "scripts/run_migrations.py", "--target", "head"]
+    restart: "no"
+    environment:
+      ENVIRONMENT: production
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-supportgpt_db}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - supportgpt-internal
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: supportgpt-backend-prod
+    restart: always
+    environment:
+      ENVIRONMENT: production
+      DEBUG: "false"
+      APP_NAME: SupportGPT-AI
+      APP_VERSION: 1.0.0
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-supportgpt_db}
+      DB_POOL_SIZE: 20
+      DB_MAX_OVERFLOW: 10
+      DB_POOL_TIMEOUT: 30
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
+      QDRANT_HOST: qdrant
+      QDRANT_PORT: 6333
+      QDRANT_API_KEY: ${QDRANT_API_KEY:-}
+      SESSION_SECRET_KEY: ${SESSION_SECRET_KEY}
+      SESSION_COOKIE_SECURE: "true"
+      SESSION_COOKIE_SAMESITE: lax
+      SESSION_COOKIE_HTTPONLY: "true"
+      CORS_ORIGINS: ${CORS_ORIGINS:-["https://app.supportgpt.internal"]}
+      WEBHOOK_SECRETS_ENCRYPTION_KEY: ${WEBHOOK_SECRETS_ENCRYPTION_KEY}
+      ENABLE_INGESTION_WORKER: "false"
+      ENABLE_DOCUMENT_WORKER: "false"
+      WORKERS: ${BACKEND_WORKERS:-4}
+      LLM_PROVIDER: ${LLM_PROVIDER:-deterministic}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      EMBEDDING_PROVIDER: ${EMBEDDING_PROVIDER:-fastembed}
+      STORAGE_LOCAL_BASE_PATH: /app/storage_data
+    volumes:
+      - backend_storage:/app/storage_data
+      - backend_backups:/app/backups
+    depends_on:
+      migration:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+      qdrant:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    networks:
+      - supportgpt-internal
+
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: supportgpt-worker-prod
+    command: ["python", "-m", "app.worker_runner"]
+    restart: always
+    environment:
+      ENVIRONMENT: production
+      DEBUG: "false"
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-supportgpt_db}
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
+      QDRANT_HOST: qdrant
+      QDRANT_PORT: 6333
+      QDRANT_API_KEY: ${QDRANT_API_KEY:-}
+      SESSION_SECRET_KEY: ${SESSION_SECRET_KEY}
+      WEBHOOK_SECRETS_ENCRYPTION_KEY: ${WEBHOOK_SECRETS_ENCRYPTION_KEY}
+      ENABLE_INGESTION_WORKER: "true"
+      ENABLE_DOCUMENT_WORKER: "true"
+      LLM_PROVIDER: ${LLM_PROVIDER:-deterministic}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      EMBEDDING_PROVIDER: ${EMBEDDING_PROVIDER:-fastembed}
+      STORAGE_LOCAL_BASE_PATH: /app/storage_data
+    volumes:
+      - backend_storage:/app/storage_data
+    depends_on:
+      migration:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+      qdrant:
+        condition: service_healthy
+    networks:
+      - supportgpt-internal
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: supportgpt-frontend-prod
+    restart: always
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_API_URL: ${PUBLIC_API_URL:-/api}
+      NEXT_PUBLIC_APP_ENV: production
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:3000/api/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    networks:
+      - supportgpt-internal
+
+  nginx:
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
+    container_name: supportgpt-proxy-prod
+    restart: always
+    ports:
+      - "${PORT:-80}:80"
+    depends_on:
+      frontend:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+    networks:
+      - supportgpt-internal
+      - supportgpt-edge
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  qdrant_data:
+    driver: local
+  backend_storage:
+    driver: local
+  backend_backups:
+    driver: local
+
+networks:
+  supportgpt-internal:
+    driver: bridge
+    internal: true
+  supportgpt-edge:
+    driver: bridge

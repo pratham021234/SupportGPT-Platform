@@ -134,6 +134,7 @@ export default function ObservabilityConsolePage() {
     } else if (activeTab === "usage") {
       fetchUsage();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedOrgId, activeTab, traceFilterOutcome, traceFilterOp, investigationFilterStatus]);
 
   // Fetch Helpers

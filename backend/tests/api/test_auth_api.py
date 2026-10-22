@@ -211,3 +211,34 @@ async def test_logout_and_session_invalidation(auth_test_context: tuple[AsyncCli
         "/api/v1/auth/me", headers={"Authorization": f"Bearer {token}"}
     )
     assert post_logout_res.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_login_rate_limiting_repeated_failures(auth_test_context: tuple[AsyncClient, AsyncSession]):
+    """Verify repeated failed logins trigger HTTP 429 RateLimitExceededException."""
+    client, _ = auth_test_context
+    from app.core.rate_limiter import rate_limiter
+
+    # Clean prior state for test isolation
+    await rate_limiter.clear_all()
+
+    # Trigger failed attempts up to limit
+    for _ in range(settings.LOGIN_RATE_LIMIT_MAX_ATTEMPTS):
+        res = await client.post(
+            "/api/v1/auth/login",
+            json={"email": "brute_force_victim@example.com", "password": "wrong_password_123"},
+        )
+        assert res.status_code == 401
+
+    # Next attempt should be blocked by rate limiter with 429
+    res = await client.post(
+        "/api/v1/auth/login",
+        json={"email": "brute_force_victim@example.com", "password": "wrong_password_123"},
+    )
+    assert res.status_code == 429
+    data = res.json()
+    assert data["error"]["code"] == "RATE_LIMIT_EXCEEDED"
+    assert "Too many failed attempts" in data["error"]["message"]
+
+    # Cleanup
+    await rate_limiter.clear_all()

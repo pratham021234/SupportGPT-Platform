@@ -16,7 +16,7 @@ from app.api.v1.health import router as root_health_router
 from app.core.config import settings
 from app.core.errors import register_error_handlers
 from app.core.logging import get_logger, setup_logging
-from app.core.middleware import CorrelationIdMiddleware
+from app.core.middleware import CorrelationIdMiddleware, SecurityHeadersMiddleware
 from app.db.session import async_engine
 
 logger = get_logger("supportgpt.main")
@@ -97,7 +97,10 @@ def create_application() -> FastAPI:
     # 1. Transport Middleware: Request Correlation Tracking
     app.add_middleware(CorrelationIdMiddleware)
 
-    # 2. Security Middleware: Cross-Origin Resource Sharing (CORS)
+    # 2. Defense-in-Depth Security Headers
+    app.add_middleware(SecurityHeadersMiddleware)
+
+    # 3. Security Middleware: Cross-Origin Resource Sharing (CORS)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.CORS_ORIGINS,
